@@ -1,4 +1,5 @@
 {
+  "name": "react-charts-library",
   "compilerOptions": {
     "target": "es5",
     "lib": [

@@ -1,5 +1,32 @@
 import { DatosGrafico } from './Grafico';
 
+// Paleta de colores personalizada
+export const paletaColores = {
+  blanco: '#ffffff',
+  verdeClaro: '#eafaf1',
+  verdeSuave: '#c1eac5',
+  verdeHierba: '#7ccba2',
+  verdeEsmeralda: '#2a9d8f'
+};
+
+// Función para generar colores con transparencia
+export const generarColores = (transparencia: number = 0.8) => {
+  const colores = [
+    paletaColores.verdeEsmeralda,
+    paletaColores.verdeHierba,
+    paletaColores.verdeSuave,
+    paletaColores.verdeClaro,
+    paletaColores.blanco
+  ];
+  
+  return {
+    backgroundColor: colores.map(color => `${color}${Math.round(transparencia * 255).toString(16).padStart(2, '0')}`),
+    borderColor: colores,
+    backgroundColorSolid: colores,
+    backgroundColorTransparent: colores.map(color => `${color}40`) // 25% de transparencia
+  };
+};
+
 // Datos para gráfico de líneas
 export const datosLineas: DatosGrafico = {
   labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
@@ -7,8 +34,8 @@ export const datosLineas: DatosGrafico = {
     {
       label: 'Ventas 2024',
       data: [65, 59, 80, 81, 56, 55],
-      backgroundColor: 'rgba(75, 192, 192, 0.2)',
-      borderColor: 'rgba(75, 192, 192, 1)',
+      backgroundColor: `${paletaColores.verdeEsmeralda}40`,
+      borderColor: paletaColores.verdeEsmeralda,
       borderWidth: 2,
       fill: false,
       tension: 0.1,
@@ -16,8 +43,8 @@ export const datosLineas: DatosGrafico = {
     {
       label: 'Ventas 2023',
       data: [28, 48, 40, 19, 86, 27],
-      backgroundColor: 'rgba(255, 99, 132, 0.2)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: `${paletaColores.verdeHierba}40`,
+      borderColor: paletaColores.verdeHierba,
       borderWidth: 2,
       fill: false,
       tension: 0.1,
@@ -32,22 +59,8 @@ export const datosBarras: DatosGrafico = {
     {
       label: 'Ingresos',
       data: [12000, 15000, 18000, 22000, 19000, 25000],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.6)',
-        'rgba(54, 162, 235, 0.6)',
-        'rgba(255, 205, 86, 0.6)',
-        'rgba(75, 192, 192, 0.6)',
-        'rgba(153, 102, 255, 0.6)',
-        'rgba(255, 159, 64, 0.6)',
-      ],
-      borderColor: [
-        'rgba(255, 99, 132, 1)',
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 205, 86, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(153, 102, 255, 1)',
-        'rgba(255, 159, 64, 1)',
-      ],
+      backgroundColor: generarColores(0.8).backgroundColor,
+      borderColor: generarColores().borderColor,
       borderWidth: 1,
     },
   ],
@@ -60,8 +73,8 @@ export const datosBarrasHorizontales: DatosGrafico = {
     {
       label: 'Unidades Vendidas',
       data: [120, 190, 300, 500, 200],
-      backgroundColor: 'rgba(54, 162, 235, 0.6)',
-      borderColor: 'rgba(54, 162, 235, 1)',
+      backgroundColor: generarColores(0.8).backgroundColor,
+      borderColor: generarColores().borderColor,
       borderWidth: 1,
     },
   ],
@@ -74,22 +87,22 @@ export const datosBarrasAgrupadas: DatosGrafico = {
     {
       label: 'Ventas 2023',
       data: [120, 150, 180, 200],
-      backgroundColor: 'rgba(255, 99, 132, 0.6)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: paletaColores.verdeEsmeralda,
+      borderColor: paletaColores.verdeEsmeralda,
       borderWidth: 1,
     },
     {
       label: 'Ventas 2024',
       data: [140, 170, 160, 220],
-      backgroundColor: 'rgba(54, 162, 235, 0.6)',
-      borderColor: 'rgba(54, 162, 235, 1)',
+      backgroundColor: paletaColores.verdeHierba,
+      borderColor: paletaColores.verdeHierba,
       borderWidth: 1,
     },
     {
       label: 'Proyección 2025',
       data: [160, 190, 180, 250],
-      backgroundColor: 'rgba(75, 192, 192, 0.6)',
-      borderColor: 'rgba(75, 192, 192, 1)',
+      backgroundColor: paletaColores.verdeSuave,
+      borderColor: paletaColores.verdeSuave,
       borderWidth: 1,
     },
   ],
@@ -102,22 +115,22 @@ export const datosBarrasApiladas: DatosGrafico = {
     {
       label: 'Desktop',
       data: [30, 45, 60, 70, 65],
-      backgroundColor: 'rgba(255, 99, 132, 0.8)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: paletaColores.verdeEsmeralda,
+      borderColor: paletaColores.verdeEsmeralda,
       borderWidth: 1,
     },
     {
       label: 'Mobile',
       data: [70, 85, 95, 110, 105],
-      backgroundColor: 'rgba(54, 162, 235, 0.8)',
-      borderColor: 'rgba(54, 162, 235, 1)',
+      backgroundColor: paletaColores.verdeHierba,
+      borderColor: paletaColores.verdeHierba,
       borderWidth: 1,
     },
     {
       label: 'Tablet',
       data: [20, 25, 30, 35, 40],
-      backgroundColor: 'rgba(255, 205, 86, 0.8)',
-      borderColor: 'rgba(255, 205, 86, 1)',
+      backgroundColor: paletaColores.verdeSuave,
+      borderColor: paletaColores.verdeSuave,
       borderWidth: 1,
     },
   ],
@@ -125,27 +138,13 @@ export const datosBarrasApiladas: DatosGrafico = {
 
 // Datos para gráfico circular (pie)
 export const datosPastel: DatosGrafico = {
-  labels: ['Rojo', 'Azul', 'Amarillo', 'Verde', 'Púrpura', 'Naranja'],
+  labels: ['caUno', 'catDos', 'catTres'],
   datasets: [
     {
       label: 'Distribución de colores',
-      data: [12, 19, 3, 5, 2, 3],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.8)',
-        'rgba(54, 162, 235, 0.8)',
-        'rgba(255, 205, 86, 0.8)',
-        'rgba(75, 192, 192, 0.8)',
-        'rgba(153, 102, 255, 0.8)',
-        'rgba(255, 159, 64, 0.8)',
-      ],
-      borderColor: [
-        'rgba(255, 99, 132, 1)',
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 205, 86, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(153, 102, 255, 1)',
-        'rgba(255, 159, 64, 1)',
-      ],
+      data: [12, 19, 3],
+      backgroundColor: generarColores(0.8).backgroundColorSolid,
+      borderColor: generarColores().borderColor,
       borderWidth: 1,
     },
   ],
@@ -159,14 +158,14 @@ export const datosDona: DatosGrafico = {
       label: 'Canal de Ventas',
       data: [300, 150, 100],
       backgroundColor: [
-        'rgba(54, 162, 235, 0.8)',
-        'rgba(255, 99, 132, 0.8)',
-        'rgba(255, 205, 86, 0.8)',
+        paletaColores.verdeEsmeralda,
+        paletaColores.verdeHierba,
+        paletaColores.verdeSuave,
       ],
       borderColor: [
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 99, 132, 1)',
-        'rgba(255, 205, 86, 1)',
+        paletaColores.verdeEsmeralda,
+        paletaColores.verdeHierba,
+        paletaColores.verdeSuave,
       ],
       borderWidth: 2,
     },
@@ -180,20 +179,8 @@ export const datosPolar: DatosGrafico = {
     {
       label: 'Ventas por Producto',
       data: [11, 16, 7, 3, 14],
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.5)',
-        'rgba(54, 162, 235, 0.5)',
-        'rgba(255, 205, 86, 0.5)',
-        'rgba(75, 192, 192, 0.5)',
-        'rgba(153, 102, 255, 0.5)',
-      ],
-      borderColor: [
-        'rgba(255, 99, 132, 1)',
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 205, 86, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(153, 102, 255, 1)',
-      ],
+      backgroundColor: generarColores(0.5).backgroundColor,
+      borderColor: generarColores().borderColor,
       borderWidth: 1,
     },
   ],
@@ -206,24 +193,24 @@ export const datosRadar: DatosGrafico = {
     {
       label: 'Producto X',
       data: [80, 90, 70, 85, 60, 95],
-      backgroundColor: 'rgba(255, 99, 132, 0.2)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: `${paletaColores.verdeEsmeralda}30`,
+      borderColor: paletaColores.verdeEsmeralda,
       borderWidth: 2,
-      pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+      pointBackgroundColor: paletaColores.verdeEsmeralda,
       pointBorderColor: '#fff',
       pointHoverBackgroundColor: '#fff',
-      pointHoverBorderColor: 'rgba(255, 99, 132, 1)',
+      pointHoverBorderColor: paletaColores.verdeEsmeralda,
     },
     {
       label: 'Producto Y',
       data: [65, 75, 85, 70, 90, 80],
-      backgroundColor: 'rgba(54, 162, 235, 0.2)',
-      borderColor: 'rgba(54, 162, 235, 1)',
+      backgroundColor: `${paletaColores.verdeHierba}30`,
+      borderColor: paletaColores.verdeHierba,
       borderWidth: 2,
-      pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+      pointBackgroundColor: paletaColores.verdeHierba,
       pointBorderColor: '#fff',
       pointHoverBackgroundColor: '#fff',
-      pointHoverBorderColor: 'rgba(54, 162, 235, 1)',
+      pointHoverBorderColor: paletaColores.verdeHierba,
     },
   ],
 };
@@ -239,8 +226,8 @@ export const datosDispersion: DatosGrafico = {
         { x: 10, y: 5 },
         { x: 0.5, y: 5.5 },
       ],
-      backgroundColor: 'rgba(255, 99, 132, 0.6)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: paletaColores.verdeEsmeralda,
+      borderColor: paletaColores.verdeEsmeralda,
       pointRadius: 6,
     } as any,
     {
@@ -251,8 +238,8 @@ export const datosDispersion: DatosGrafico = {
         { x: 15, y: 10 },
         { x: 2, y: 8 },
       ],
-      backgroundColor: 'rgba(54, 162, 235, 0.6)',
-      borderColor: 'rgba(54, 162, 235, 1)',
+      backgroundColor: paletaColores.verdeHierba,
+      borderColor: paletaColores.verdeHierba,
       pointRadius: 6,
     } as any,
   ],
@@ -269,8 +256,8 @@ export const datosBurbujas: DatosGrafico = {
         { x: 30, y: 40, r: 20 },
         { x: 10, y: 20, r: 8 },
       ],
-      backgroundColor: 'rgba(255, 99, 132, 0.6)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: `${paletaColores.verdeEsmeralda}90`,
+      borderColor: paletaColores.verdeEsmeralda,
       borderWidth: 1,
     } as any,
   ],
@@ -283,8 +270,8 @@ export const datosArea: DatosGrafico = {
     {
       label: 'Ventas',
       data: [65, 59, 80, 81, 56, 55],
-      backgroundColor: 'rgba(75, 192, 192, 0.3)',
-      borderColor: 'rgba(75, 192, 192, 1)',
+      backgroundColor: `${paletaColores.verdeEsmeralda}40`,
+      borderColor: paletaColores.verdeEsmeralda,
       borderWidth: 2,
       fill: true,
       tension: 0.4,
@@ -292,8 +279,8 @@ export const datosArea: DatosGrafico = {
     {
       label: 'Objetivo',
       data: [50, 55, 70, 75, 50, 60],
-      backgroundColor: 'rgba(255, 99, 132, 0.2)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: `${paletaColores.verdeHierba}40`,
+      borderColor: paletaColores.verdeHierba,
       borderWidth: 2,
       fill: true,
       tension: 0.4,
@@ -308,16 +295,16 @@ export const datosMultiEje: DatosGrafico = {
     {
       label: 'Ventas (Miles)',
       data: [65, 59, 80, 81, 56, 55],
-      backgroundColor: 'rgba(255, 99, 132, 0.2)',
-      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: `${paletaColores.verdeEsmeralda}40`,
+      borderColor: paletaColores.verdeEsmeralda,
       borderWidth: 2,
       yAxisID: 'y',
     },
     {
       label: 'Temperatura (°C)',
       data: [28, 48, 40, 19, 86, 27],
-      backgroundColor: 'rgba(54, 162, 235, 0.2)',
-      borderColor: 'rgba(54, 162, 235, 1)',
+      backgroundColor: `${paletaColores.verdeHierba}40`,
+      borderColor: paletaColores.verdeHierba,
       borderWidth: 2,
       yAxisID: 'y1',
     },
