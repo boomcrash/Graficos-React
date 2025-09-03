@@ -56,7 +56,9 @@ export type TipoGrafico =
   | 'bubble'
   | 'area'
   | 'multiEje'
-  | 'card';
+  | 'card'
+  | 'gauge'
+  | 'cardIndicadores';
 
 // Interfaz para los datos del gráfico
 export interface DatosGrafico {
@@ -76,10 +78,25 @@ export interface DatosGrafico {
   }>;
 }
 
+// Tipos para el peso de la fuente en Chart.js
+type ChartFontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
+
+// Interfaz para el contexto del formateador de etiquetas
+interface DataLabelsContext {
+  dataIndex: number;
+  dataset: {
+    data: any[];
+  };
+  [key: string]: any;
+}
+
 // Interfaz para las opciones del gráfico
 export interface OpcionesGrafico {
   responsive?: boolean;
   maintainAspectRatio?: boolean;
+  rotation?: number;
+  circumference?: number;
+  cutout?: string;
   plugins?: {
     legend?: {
       position?: 'top' | 'left' | 'bottom' | 'right';
@@ -89,7 +106,26 @@ export interface OpcionesGrafico {
       display?: boolean;
       text?: string;
     };
-    tooltip?: object;
+    tooltip?: {
+      enabled?: boolean;
+      [key: string]: any;
+    };
+    datalabels?: {
+      display?: boolean;
+      color?: string;
+      font?: {
+        weight?: string | number;
+        size?: number;
+        family?: string;
+      };
+      formatter?: (value: any, context: DataLabelsContext) => string;
+      [key: string]: any;
+    } | false;
+    needle?: {
+      needleValue: number;
+      maxValue: number;
+    };
+    [key: string]: any;
   };
   scales?: object;
   animation?: object;
@@ -144,7 +180,62 @@ export interface GraficoProps {
     changeColor?: string;
     changeFontSize?: string;
   };
+  // Props específicas para el gráfico tipo gauge
+  gaugeProps?: {
+    ranges: Array<{
+      from: number;
+      to: number;
+      color: string;
+    }>;
+    value: number;
+    originalValue?: number; // Valor original sin limitar para mostrar en el centro
+    width?: number;
+    label?: string;
+    showLabels?: boolean;
+    isPercent?: boolean;
+    showValue?: boolean;
+    valueColor?: string;
+    valueFontSize?: number; // Tamaño de fuente del valor del centro
+    labelStyle?: {
+      backgroundColor?: string;
+      color?: string;
+    };
+    // Nuevas props para estilizado del contenedor
+    containerStyle?: {
+      backgroundColor?: string;
+      borderRadius?: number;
+      border?: string;
+      padding?: number;
+    };
+    // Nuevas props para símbolo personalizado
+    showSymbol?: boolean; // Mostrar símbolo cuando isPercent es false
+    symbol?: string; // El símbolo a mostrar (ej: '$', '€', etc.)
+    symbolPosition?: 'before' | 'after'; // Posición del símbolo
+  };
+  // Props específicas para el gráfico tipo cardIndicadores
+  cardIndicadoresProps?: {
+    indicadores: Array<{
+      icono: string; // Nombre del ícono de Material Icons
+      nombre: string;
+      valor: string | number;
+      isPercent?: boolean;
+      iconoColor?: string;
+      iconoTamano?: number;
+      nombreColor?: string;
+      nombreTamano?: number;
+      valorColor?: string;
+      valorTamano?: number;
+    }>;
+    alineacion?: 'left' | 'center' | 'right' | 'justify';
+    ancho?: string | number;
+    padding?: number;
+    backgroundColor?: string;
+    borderRadius?: number;
+    border?: string;
+    columnGap?: number; // Espaciado entre columnas para modo justify
+  };
 }
+
 
 // --- Interfaces para las Cards ---
 
@@ -168,6 +259,219 @@ export interface CardProps {
 }
 
 // Mapeo de tipos de gráficos a componentes
+// Plugin para dibujar la aguja del gauge
+const needlePlugin = {
+  id: 'needle',
+  afterDatasetDraw(chart: any, args: any, options: any) {
+    const { needleValue, maxValue } = options;
+    const angle = Math.PI + (Math.PI * needleValue) / maxValue;
+
+    const cx = chart._metasets[0].data[0].x;
+    const cy = chart._metasets[0].data[0].y;
+    const r = chart._metasets[0].data[0].outerRadius;
+
+    const needleLength = r * 0.9;
+    const needleRadius = 3;
+
+    const ctx = chart.ctx;
+    ctx.save();
+
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(needleLength, 0);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, needleRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+
+    ctx.restore();
+  },
+};
+
+// Registrar el plugin de la aguja
+ChartJS.register(needlePlugin);
+
+// Componente CardIndicadores
+interface CardIndicadoresComponentProps {
+  indicadores: Array<{
+    icono: string;
+    nombre: string;
+    valor: string | number;
+    isPercent?: boolean;
+    iconoColor?: string;
+    iconoTamano?: number;
+    nombreColor?: string;
+    nombreTamano?: number;
+    valorColor?: string;
+    valorTamano?: number;
+  }>;
+  alineacion?: 'left' | 'center' | 'right' | 'justify';
+  ancho?: string | number;
+  padding?: number;
+  backgroundColor?: string;
+  borderRadius?: number;
+  border?: string;
+  columnGap?: number; // Espaciado entre columnas para modo justify
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+const CardIndicadores: React.FC<CardIndicadoresComponentProps> = ({
+  indicadores,
+  alineacion = 'left',
+  ancho = '300px',
+  padding = 0,
+  backgroundColor = 'transparent',
+  borderRadius = 0,
+  border = 'none',
+  columnGap = 16,
+  className = '',
+  style = {}
+}) => {
+  const containerStyle: React.CSSProperties = {
+    width: ancho,
+    padding: `${padding}px`,
+    backgroundColor,
+    borderRadius: `${borderRadius}px`,
+    border,
+    ...style
+  };
+
+  const getAlineacionStyle = (): React.CSSProperties => {
+    switch (alineacion) {
+      case 'center':
+        return { textAlign: 'center', justifyContent: 'center' };
+      case 'right':
+        return { textAlign: 'right', justifyContent: 'flex-end' };
+      case 'justify':
+        return { 
+          display: 'grid',
+          gridTemplateColumns: `auto 1fr auto`,
+          gap: `${columnGap}px`,
+          alignItems: 'center'
+        };
+      default:
+        return { textAlign: 'left', justifyContent: 'flex-start' };
+    }
+  };
+
+  // Renderizado para modo justify (formato de tabla con columnas)
+  if (alineacion === 'justify') {
+    return (
+        <div className={`card-indicadores ${className}`} style={containerStyle}>
+          {indicadores.map((indicador, index) => (
+            <div
+              key={index}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `auto 1fr auto`,
+                gap: `${columnGap}px`,
+                alignItems: 'center',
+                marginBottom: index < indicadores.length - 1 ? '12px' : '0',
+              }}
+            >
+              {/* Columna 1: Ícono */}
+              <span
+                className="material-icons"
+                style={{
+                  fontSize: `${indicador.iconoTamano || 20}px`,
+                  color: indicador.iconoColor || '#666666',
+                  lineHeight: 1,
+                  justifySelf: 'start'
+                }}
+              >
+                {indicador.icono}
+              </span>
+              
+              {/* Columna 2: Nombre (ocupa el espacio disponible) */}
+              <span
+                style={{
+                  fontSize: `${indicador.nombreTamano || 14}px`,
+                  color: indicador.nombreColor || '#000000',
+                  fontWeight: 500,
+                  justifySelf: 'start'
+                }}
+              >
+                {indicador.nombre}
+              </span>
+              
+              {/* Columna 3: Valor */}
+              <span
+                style={{
+                  fontSize: `${indicador.valorTamano || 14}px`,
+                  color: indicador.valorColor || '#000000',
+                  fontWeight: 600,
+                  justifySelf: 'end'
+                }}
+              >
+                {indicador.valor}{indicador.isPercent ? '%' : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+    );
+  }
+
+  // Renderizado para modos tradicionales (left, center, right)
+  return (
+    <div className={`card-indicadores ${className}`} style={containerStyle}>
+      {indicadores.map((indicador, index) => (
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: index < indicadores.length - 1 ? '12px' : '0',
+            ...getAlineacionStyle()
+          }}
+        >
+          {/* Ícono de Material Icons */}
+          <span
+            className="material-icons"
+            style={{
+              fontSize: `${indicador.iconoTamano || 20}px`,
+              color: indicador.iconoColor || '#666666',
+              marginRight: '8px',
+              lineHeight: 1
+            }}
+          >
+            {indicador.icono}
+          </span>
+          
+          {/* Nombre del indicador */}
+          <span
+            style={{
+              fontSize: `${indicador.nombreTamano || 14}px`,
+              color: indicador.nombreColor || '#000000',
+              marginRight: '8px',
+              fontWeight: 500
+            }}
+          >
+            {indicador.nombre}
+          </span>
+          
+          {/* Valor del indicador */}
+          <span
+            style={{
+              fontSize: `${indicador.valorTamano || 14}px`,
+              color: indicador.valorColor || '#000000',
+              fontWeight: 600
+            }}
+          >
+            {indicador.valor}{indicador.isPercent ? '%' : ''}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const chartComponents = {
   line: Line,
   bar: Bar,
@@ -184,6 +488,10 @@ const chartComponents = {
   multiEje: Line, // Line chart con múltiples ejes Y
   // Card no usa chartComponents, se maneja por separado
   card: null,
+  // Gauge usa el componente Doughnut con configuración especial
+  gauge: Doughnut,
+  // CardIndicadores no usa chartComponents, se maneja por separado
+  cardIndicadores: null,
 } as const;
 
 /**
@@ -205,6 +513,8 @@ const Grafico: React.FC<GraficoProps> = ({
   mostrarEjeY = true,
   configEtiquetas = {},
   cardProps = {},
+  gaugeProps,
+  cardIndicadoresProps,
   ...otherProps 
 }) => {
   // Manejar componente Card por separado
@@ -224,6 +534,30 @@ const Grafico: React.FC<GraficoProps> = ({
         valueFontSize={cardProps.valueFontSize}
         changeColor={cardProps.changeColor}
         changeFontSize={cardProps.changeFontSize}
+        className={className}
+        style={style}
+        {...otherProps}
+      />
+    );
+  }
+
+  // Manejar componente CardIndicadores por separado
+  if (tipo === 'cardIndicadores') {
+    if (!cardIndicadoresProps || !cardIndicadoresProps.indicadores) {
+      console.error('CardIndicadores requiere la prop cardIndicadoresProps con indicadores');
+      return <div>Error: CardIndicadores requiere datos de indicadores</div>;
+    }
+
+    return (
+      <CardIndicadores
+        indicadores={cardIndicadoresProps.indicadores}
+        alineacion={cardIndicadoresProps.alineacion || 'left'}
+        ancho={cardIndicadoresProps.ancho || '300px'}
+        padding={cardIndicadoresProps.padding || 0}
+        backgroundColor={cardIndicadoresProps.backgroundColor || 'transparent'}
+        borderRadius={cardIndicadoresProps.borderRadius || 0}
+        border={cardIndicadoresProps.border || 'none'}
+        columnGap={cardIndicadoresProps.columnGap || 16}
         className={className}
         style={style}
         {...otherProps}
@@ -401,11 +735,188 @@ const Grafico: React.FC<GraficoProps> = ({
     },
   };
 
+  // Configuración especial para el gauge
+  if (tipo === 'gauge' && gaugeProps) {
+    const { 
+      ranges, 
+      value, 
+      originalValue,
+      showLabels = mostrarEtiquetas, 
+      isPercent, 
+      label, 
+      width: gaugeWidth, 
+      showValue = false, 
+      valueColor = '#333333',
+      valueFontSize = 24,
+      containerStyle = {},
+      showSymbol = false,
+      symbol = '$',
+      symbolPosition = 'before'
+    } = gaugeProps;
+    const max = ranges[ranges.length - 1].to;
+    
+    // Valor limitado para la aguja del gauge (no debe exceder el rango máximo)
+    const limitedValue = Math.min(value, max);
+
+    const segments = ranges.map(r => ({
+      value: r.to - r.from,
+      color: r.color,
+      from: r.from,
+      to: r.to,
+    }));
+
+    const total = segments.reduce((sum, s) => sum + s.value, 0);
+    const dataValues = segments.map(s => s.value / total);
+    const colors = segments.map(s => s.color);
+    const labels = segments.map(s => `${s.from}-${s.to}`);
+
+    data = {
+      labels: labels,
+      datasets: [{
+        data: dataValues,
+        backgroundColor: colors,
+        borderWidth: 0,
+        cutout: '80%',
+        circumference: 180,
+        rotation: 270,
+      }]
+    };
+
+    // Configuración específica del gauge - evitar conflictos con datalabels generales
+    const finalOptions = {
+      rotation: -90,
+      circumference: 180,
+      cutout: '80%',
+      responsive: options.responsive ?? true,
+      maintainAspectRatio: options.maintainAspectRatio ?? false,
+      plugins: {
+        legend: {
+          display: options.plugins?.legend?.display ?? true,
+          position: options.plugins?.legend?.position ?? 'top',
+        },
+        title: {
+          display: options.plugins?.title?.display ?? false,
+          text: options.plugins?.title?.text ?? label ?? '',
+        },
+        tooltip: {
+          enabled: options.plugins?.tooltip?.enabled ?? false,
+        },
+        datalabels: showLabels ? {
+          display: true,
+          color: configEtiquetas?.color || '#333333',
+          backgroundColor: configEtiquetas?.backgroundColor || '#f5f5f5',
+          borderColor: configEtiquetas?.borderColor || '#d0d0d0',
+          borderRadius: configEtiquetas?.borderRadius || 6,
+          borderWidth: 1,
+          padding: configEtiquetas?.padding || 8,
+          font: {
+            size: configEtiquetas?.fontSize || 12,
+            family: configEtiquetas?.fontFamily || 'Arial, sans-serif',
+            weight: configEtiquetas?.fontWeight || 500,
+          },
+          anchor: 'center',
+          align: 'center',
+          offset: 0,
+          formatter: (value: any, context: { dataIndex?: number }) => {
+            if (context && typeof context.dataIndex === 'number' && labels[context.dataIndex]) {
+              return labels[context.dataIndex];
+            }
+            return '';
+          },
+        } : { display: false },
+        needle: {
+          needleValue: limitedValue,  // Usar valor limitado para la aguja
+          maxValue: max,
+        },
+      },
+    };
+
+    // Estilos del contenedor específicos para gauge con valores por defecto transparentes
+    const defaultContainerStyle: React.CSSProperties = {
+      width: width || '100%',
+      height: height || '400px',
+      backgroundColor: 'transparent', // Por defecto transparente
+      borderRadius: 0, // Por defecto sin border radius
+      border: 'none', // Por defecto sin borde
+      padding: 0, // Por defecto sin padding
+      ...style,
+    };
+
+    // Aplicar estilos personalizados del containerStyle si se proporcionan
+    if (containerStyle.backgroundColor !== undefined) {
+      defaultContainerStyle.backgroundColor = containerStyle.backgroundColor;
+    }
+    if (containerStyle.borderRadius !== undefined) {
+      defaultContainerStyle.borderRadius = `${containerStyle.borderRadius}px`;
+    }
+    if (containerStyle.border !== undefined) {
+      defaultContainerStyle.border = containerStyle.border;
+    }
+    if (containerStyle.padding !== undefined) {
+      defaultContainerStyle.padding = `${containerStyle.padding}px`;
+    }
+
+    if (gaugeWidth) {
+      defaultContainerStyle.maxWidth = gaugeWidth;
+    }
+
+    return (
+      <div 
+        className={`grafico-container ${className}`} 
+        style={{ ...defaultContainerStyle, position: 'relative' }}
+        data-chart-type={tipo}
+      >
+        <ChartComponent 
+          data={data} 
+          options={finalOptions as any}
+          {...otherProps}
+        />
+        {showValue && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, 80%)', // -25% en Y para centrarlo en el semicírculo
+              fontSize: `${valueFontSize}px`,
+              fontWeight: 'bold',
+              color: valueColor,
+              textAlign: 'center',
+              pointerEvents: 'none',
+              zIndex: 10
+            }}
+          >
+            {(() => {
+              const displayValue = originalValue !== undefined ? originalValue : value;
+              
+              if (isPercent) {
+                // Modo porcentaje
+                return `${displayValue}%`;
+              } else {
+                // Modo no porcentaje
+                if (showSymbol) {
+                  // Con símbolo personalizado
+                  return symbolPosition === 'before' 
+                    ? `${symbol}${displayValue}`
+                    : `${displayValue}${symbol}`;
+                } else {
+                  // Sin símbolo
+                  return displayValue;
+                }
+              }
+            })()}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // Obtener opciones específicas del tipo de gráfico
   const specificOptions = getSpecificOptions(tipo, options);
 
   // Configuración de etiquetas de datos con valores predeterminados optimizados
-  const dataLabelsConfig = mostrarEtiquetas ? {
+  // No aplicar a gauge ya que tiene su propia configuración
+  const dataLabelsConfig = (mostrarEtiquetas && tipo !== 'gauge') ? {
     plugins: {
       datalabels: {
         display: true,
@@ -552,7 +1063,7 @@ const Grafico: React.FC<GraficoProps> = ({
     >
       <ChartComponent 
         data={data} 
-        options={finalOptions} 
+        options={finalOptions as any} // Temporal fix para los tipos de Chart.js
         {...otherProps}
       />
     </div>

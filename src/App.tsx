@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './App.css';
 import { 
   Grafico, 
@@ -15,7 +15,9 @@ import {
   datosDispersion, 
   datosBurbujas,
   datosArea,
-  datosMultiEje
+  datosMultiEje,
+  datosGauge,
+  datosCardIndicadores
 } from './components';
 
 interface TipoGraficoInfo {
@@ -46,7 +48,177 @@ function App() {
   const [mostrarEjeYControl, setMostrarEjeYControl] = useState<boolean>(true);
   const [alturaGrafico, setAlturaGrafico] = useState<number>(400);
 
+  // Estados específicos para el tacómetro
+  const [tacometroLabels, setTacometroLabels] = useState<string>('0-70,70-90,90-100');
+  const [tacometroColors, setTacometroColors] = useState<string>('#d32f2f,#fbc02d,#388e3c');
+  const [tacometroValue, setTacometroValue] = useState<number>(85);
+  const [tacometroValidationError, setTacometroValidationError] = useState<string>('');
+  const [tacometroShowValue, setTacometroShowValue] = useState<boolean>(true);
+  const [tacometroValueColor, setTacometroValueColor] = useState<string>('#333333');
+  const [tacometroValueFontSize, setTacometroValueFontSize] = useState<number>(24);
+  const [tacometroIsPercent, setTacometroIsPercent] = useState<boolean>(true);
+
+  // Estados para el estilo del contenedor del tacómetro
+  const [tacometroBackgroundColor, setTacometroBackgroundColor] = useState<string>('transparent');
+  const [tacometroBorderRadius, setTacometroBorderRadius] = useState<number>(0);
+  const [tacometroBorder, setTacometroBorder] = useState<string>('none');
+  const [tacometroPadding, setTacometroPadding] = useState<number>(0);
+
+  // Estados para el símbolo personalizado del tacómetro
+  const [tacometroShowSymbol, setTacometroShowSymbol] = useState<boolean>(false);
+  const [tacometroSymbol, setTacometroSymbol] = useState<string>('$');
+  const [tacometroSymbolPosition, setTacometroSymbolPosition] = useState<'before' | 'after'>('before');
+
+  // Estados específicos para CardIndicadores
+  const [cardIndicadores, setCardIndicadores] = useState([
+    {
+      icono: 'home',
+      nombre: 'Ventas Totales',
+      valor: 125000,
+      isPercent: false,
+      iconoColor: '#2196F3',
+      iconoTamano: 20,
+      nombreColor: '#666666',
+      nombreTamano: 14,
+      valorColor: '#333333',
+      valorTamano: 14
+    },
+    {
+      icono: 'trending_up',
+      nombre: 'Crecimiento',
+      valor: 15,
+      isPercent: true,
+      iconoColor: '#4CAF50',
+      iconoTamano: 20,
+      nombreColor: '#666666',
+      nombreTamano: 14,
+      valorColor: '#333333',
+      valorTamano: 14
+    },
+    {
+      icono: 'shopping_cart',
+      nombre: 'Productos',
+      valor: 1250,
+      isPercent: false,
+      iconoColor: '#FF9800',
+      iconoTamano: 20,
+      nombreColor: '#666666',
+      nombreTamano: 14,
+      valorColor: '#333333',
+      valorTamano: 14
+    },
+    {
+      icono: 'people',
+      nombre: 'Clientes',
+      valor: 450,
+      isPercent: false,
+      iconoColor: '#9C27B0',
+      iconoTamano: 20,
+      nombreColor: '#666666',
+      nombreTamano: 14,
+      valorColor: '#333333',
+      valorTamano: 14
+    }
+  ]);
+
+  // Estados para configuraciones globales del CardIndicadores
+  const [cardAlineacion, setCardAlineacion] = useState<'left' | 'center' | 'right' | 'justify'>('left');
+  const [cardAncho, setCardAncho] = useState<string>('320px');
+  const [cardPadding, setCardPadding] = useState<number>(0);
+  const [cardBackgroundColor, setCardBackgroundColor] = useState<string>('transparent');
+  const [cardBorderRadius, setCardBorderRadius] = useState<number>(0);
+  const [cardBorder, setCardBorder] = useState<string>('none');
+  const [cardColumnGap, setCardColumnGap] = useState<number>(16);
+
+  // Funciones helper para CardIndicadores
+  const parseArrayInput = (input: string): string[] => {
+    return input.split(',').map(item => item.trim()).filter(item => item.length > 0);
+  };
+
+  const parseNumericArrayInput = (input: string): number[] => {
+    return input.split(',').map(item => parseFloat(item.trim())).filter(num => !isNaN(num));
+  };
+
+  const generateCardIndicadoresData = () => {
+    return {
+      indicadores: cardIndicadores.map(indicador => ({
+        icono: indicador.icono,
+        nombre: indicador.nombre,
+        valor: indicador.valor,
+        isPercent: indicador.isPercent,
+        iconoColor: indicador.iconoColor,
+        iconoTamano: indicador.iconoTamano,
+        nombreColor: indicador.nombreColor,
+        nombreTamano: indicador.nombreTamano,
+        valorColor: indicador.valorColor,
+        valorTamano: indicador.valorTamano
+      })),
+      alineacion: cardAlineacion,
+      ancho: cardAncho,
+      padding: cardPadding,
+      backgroundColor: cardBackgroundColor,
+      borderRadius: cardBorderRadius,
+      border: cardBorder,
+      columnGap: cardColumnGap
+    };
+  };
+
+  // Funciones para manejar los indicadores
+  const agregarIndicador = () => {
+    setCardIndicadores([...cardIndicadores, {
+      icono: 'home',
+      nombre: 'Nuevo Indicador',
+      valor: 0,
+      isPercent: false,
+      iconoColor: '#2196F3',
+      iconoTamano: 20,
+      nombreColor: '#666666',
+      nombreTamano: 14,
+      valorColor: '#333333',
+      valorTamano: 14
+    }]);
+  };
+
+  const eliminarIndicador = (index: number) => {
+    setCardIndicadores(cardIndicadores.filter((_, i) => i !== index));
+  };
+
+  const actualizarIndicador = (index: number, campo: string, valor: any) => {
+    const nuevosIndicadores = [...cardIndicadores];
+    (nuevosIndicadores[index] as any)[campo] = valor;
+    setCardIndicadores(nuevosIndicadores);
+  };
+
   const tiposGraficos: TipoGraficoInfo[] = [
+    {
+      tipo: 'gauge',
+      nombre: 'Grafico Tacometro',
+      descripcion: 'Ideal para mostrar métricas de rendimiento o progreso con rangos de valores.',
+      datos: datosGauge,
+      codigoEjemplo: `<Grafico
+  tipo="gauge"
+  gaugeProps={{
+    ranges: [
+      { from: 0, to: 70, color: '#d32f2f' },
+      { from: 70, to: 90, color: '#fbc02d' },
+      { from: 90, to: 100, color: '#388e3c' }
+    ],
+    value: 85,
+    showLabels: false,
+    showValue: true,
+    valueColor: '#333333',
+    valueFontSize: 24,
+    isPercent: true
+  }}
+  height="300px"
+/>`,
+      opciones: {
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false },
+        }
+      }
+    },
     {
       tipo: 'line',
       nombre: 'Gráfico de Líneas',
@@ -411,10 +583,71 @@ function App() {
   }}
   style={{ maxWidth: '300px', margin: '0 auto' }}
 />`
+    },
+    {
+      tipo: 'cardIndicadores',
+      nombre: 'Card de Indicadores',
+      descripcion: 'Muestra múltiples indicadores con iconos de Material Icons en un formato de lista compacto.',
+      datos: datosCardIndicadores, // No se usa pero es requerido
+      codigoEjemplo: `<Grafico
+  tipo="cardIndicadores"
+  cardIndicadoresProps={{
+    indicadores: [
+      {
+        icono: 'show_chart',
+        nombre: 'YTD Cump Presup',
+        valor: 92,
+        isPercent: true,
+        iconoColor: '#f59e0b',
+        nombreColor: '#374151',
+        valorColor: '#1f2937'
+      },
+      {
+        icono: 'trending_up',
+        nombre: 'MTH Cump Presup',
+        valor: 88,
+        isPercent: true,
+        iconoColor: '#10b981',
+        nombreColor: '#374151',
+        valorColor: '#1f2937'
+      }
+    ],
+    alineacion: 'left',
+    ancho: '320px',
+    padding: 0
+  }}
+/>`
     }
   ];
 
   const tipoActual = tiposGraficos.find(t => t.tipo === tipoSeleccionado) || tiposGraficos[0];
+
+  // Memorizar validación y procesamiento de datos del tacómetro
+  const datosValidadosTacometro = useMemo(() => {
+    if (tipoSeleccionado !== 'gauge') return null;
+    
+    const labels = tacometroLabels.split(',').map(l => l.trim()).filter(l => l);
+    const colors = tacometroColors.split(',').map(c => c.trim()).filter(c => c);
+
+    if (labels.length !== colors.length) {
+      const error = `Error: Labels (${labels.length}) y Colors (${colors.length}) deben tener la misma cantidad de elementos.`;
+      setTacometroValidationError(error);
+      return null;
+    }
+
+    // Validar que colors sean válidos
+    const colorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    if (!colors.every(c => colorRegex.test(c))) {
+      setTacometroValidationError('Error: Todos los colores deben ser códigos hex válidos (ej: #ff0000).');
+      return null;
+    }
+
+    setTacometroValidationError('');
+    return {
+      labels,
+      backgroundColor: colors
+    };
+  }, [tipoSeleccionado, tacometroLabels, tacometroColors]);
 
   // Función para generar código de ejemplo dinámico
   const generarCodigoEjemplo = () => {
@@ -489,9 +722,16 @@ function App() {
 
     // Obtener datos de ejemplo formateados (función existente...)
     const formatearDatos = () => {
-      if (tipoActual.tipo === 'card') return '';
+      if (tipoActual.tipo === 'card' || tipoActual.tipo === 'cardIndicadores') return '';
       
       const ejemploDatos = {
+        gauge: (() => {
+          const datosValidados = datosValidadosTacometro;
+          if (!datosValidados) {
+            return `data={/* No se requiere data específica para gauge */}`;
+          }
+          return `data={/* No se requiere data específica para gauge */}`;
+        })(),
         line: `{
     labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
     datasets: [{
@@ -649,9 +889,142 @@ function App() {
 />`;
     }
 
+    if (tipoActual.tipo === 'cardIndicadores') {
+      // Generar indicadores dinámicamente basado en el estado actual
+      const indicadoresCode = cardIndicadores.map(indicador => `      {
+        icono: '${indicador.icono}',
+        nombre: '${indicador.nombre}',
+        valor: ${indicador.valor},
+        isPercent: ${indicador.isPercent},
+        iconoColor: '${indicador.iconoColor}',
+        iconoTamano: ${indicador.iconoTamano},
+        nombreColor: '${indicador.nombreColor}',
+        nombreTamano: ${indicador.nombreTamano},
+        valorColor: '${indicador.valorColor}',
+        valorTamano: ${indicador.valorTamano}
+      }`).join(',\n');
+
+      return `<Grafico
+  tipo="cardIndicadores"
+  cardIndicadoresProps={{
+    indicadores: [
+${indicadoresCode}
+    ],
+    alineacion: '${cardAlineacion}',
+    ancho: '${cardAncho}',
+    padding: ${cardPadding},
+    backgroundColor: '${cardBackgroundColor}',
+    borderRadius: ${cardBorderRadius},
+    border: '${cardBorder}'${cardAlineacion === 'justify' ? `,
+    columnGap: ${cardColumnGap}` : ''}
+  }}
+/>`;
+    }
+
+    // Generar gaugeProps dinámico para el tipo gauge
+    const gaugePropsCode = tipoActual.tipo === 'gauge' ? (() => {
+      const datosValidados = datosValidadosTacometro;
+      if (!datosValidados) {
+        const valorLimitado = Math.min(tacometroValue, 100);
+        
+        // Construir containerStyle solo si hay valores diferentes a los por defecto
+        const containerStyleParts = [];
+        if (tacometroBackgroundColor !== 'transparent') {
+          containerStyleParts.push(`backgroundColor: '${tacometroBackgroundColor}'`);
+        }
+        if (tacometroBorderRadius !== 0) {
+          containerStyleParts.push(`borderRadius: ${tacometroBorderRadius}`);
+        }
+        if (tacometroBorder !== 'none') {
+          containerStyleParts.push(`border: '${tacometroBorder}'`);
+        }
+        if (tacometroPadding !== 0) {
+          containerStyleParts.push(`padding: ${tacometroPadding}`);
+        }
+        
+        const containerStyleCode = containerStyleParts.length > 0 ? `,
+    containerStyle: {
+      ${containerStyleParts.join(',\n      ')}
+    }` : '';
+        
+        // Construir opciones de símbolo personalizado solo si showSymbol es true y no es porcentaje
+        const symbolCode = (!tacometroIsPercent && tacometroShowSymbol) ? `,
+    showSymbol: true,
+    symbol: '${tacometroSymbol}',
+    symbolPosition: '${tacometroSymbolPosition}'` : '';
+        
+        return `
+  gaugeProps={{
+    ranges: [
+      { from: 0, to: 70, color: '#d32f2f' },
+      { from: 70, to: 90, color: '#fbc02d' },
+      { from: 90, to: 100, color: '#388e3c' }
+    ],
+    value: ${valorLimitado},
+    showLabels: ${mostrarEtiquetas},
+    showValue: ${tacometroShowValue},
+    valueColor: '${tacometroValueColor}',
+    valueFontSize: ${tacometroValueFontSize},
+    isPercent: ${tacometroIsPercent}${containerStyleCode}${symbolCode}
+  }}`;
+      }
+      
+      const ranges = datosValidados.labels.map((label: string, index: number) => {
+        const [from, to] = label.split('-').map((v: string) => parseFloat(v.trim()));
+        return { from: from || index * 10, to: to || (index + 1) * 10 };
+      });
+      
+      const valorMaximo = Math.max(...ranges.map(range => range.to));
+      const valorLimitado = Math.min(tacometroValue, valorMaximo);
+      
+      const rangesString = datosValidados.labels.map((label: string, index: number) => {
+        const [from, to] = label.split('-').map((v: string) => parseFloat(v.trim()));
+        return `      { from: ${from || index * 10}, to: ${to || (index + 1) * 10}, color: '${datosValidados.backgroundColor[index]}' }`;
+      }).join(',\n');
+      
+      // Construir containerStyle solo si hay valores diferentes a los por defecto
+      const containerStyleParts = [];
+      if (tacometroBackgroundColor !== 'transparent') {
+        containerStyleParts.push(`backgroundColor: '${tacometroBackgroundColor}'`);
+      }
+      if (tacometroBorderRadius !== 0) {
+        containerStyleParts.push(`borderRadius: ${tacometroBorderRadius}`);
+      }
+      if (tacometroBorder !== 'none') {
+        containerStyleParts.push(`border: '${tacometroBorder}'`);
+      }
+      if (tacometroPadding !== 0) {
+        containerStyleParts.push(`padding: ${tacometroPadding}`);
+      }
+      
+      const containerStyleCode = containerStyleParts.length > 0 ? `,
+    containerStyle: {
+      ${containerStyleParts.join(',\n      ')}
+    }` : '';
+      
+      // Construir opciones de símbolo personalizado solo si showSymbol es true y no es porcentaje
+      const symbolCode = (!tacometroIsPercent && tacometroShowSymbol) ? `,
+    showSymbol: true,
+    symbol: '${tacometroSymbol}',
+    symbolPosition: '${tacometroSymbolPosition}'` : '';
+      
+      return `
+  gaugeProps={{
+    ranges: [
+${rangesString}
+    ],
+    value: ${valorLimitado},
+    showLabels: ${mostrarEtiquetas},
+    showValue: ${tacometroShowValue},
+    valueColor: '${tacometroValueColor}',
+    valueFontSize: ${tacometroValueFontSize},
+    isPercent: ${tacometroIsPercent}${containerStyleCode}${symbolCode}
+  }}`;
+    })() : '';
+
     return `<Grafico
-  tipo="${tipoActual.tipo}"
-  data=${formatearDatos()}${mostrarEtiquetasCode}${mostrarEjeXCode}${mostrarEjeYCode}${configEtiquetasCode}
+  tipo="${tipoActual.tipo}"${tipoActual.tipo === 'gauge' ? '' : `
+  data=${formatearDatos()}`}${mostrarEtiquetasCode}${mostrarEjeXCode}${mostrarEjeYCode}${configEtiquetasCode}${gaugePropsCode}
   options=${generarOpciones()}${alturaCode}
 />`;
   };
@@ -727,87 +1100,90 @@ function App() {
               </h3>
               
               {/* Etiquetas de Datos */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
-                  🏷️ Etiquetas de Datos
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="checkbox"
-                      checked={mostrarEtiquetas}
-                      onChange={(e) => setMostrarEtiquetas(e.target.checked)}
-                    />
-                    <span style={{ fontSize: '13px' }}>Mostrar etiquetas</span>
-                  </label>
+              {(tipoActual.tipo as any) !== 'cardIndicadores' && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
+                    🏷️ Etiquetas de Datos
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={mostrarEtiquetas}
+                        onChange={(e) => setMostrarEtiquetas(e.target.checked)}
+                      />
+                      <span style={{ fontSize: '13px' }}>Mostrar etiquetas</span>
+                    </label>
+                    
+                    {mostrarEtiquetas && (
+                      <div style={{ marginLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', minWidth: '70px' }}>Color texto:</span>
+                          <input
+                            type="color"
+                            value={colorEtiquetas}
+                            onChange={(e) => setColorEtiquetas(e.target.value)}
+                            style={{ width: '35px', height: '25px' }}
+                          />
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', minWidth: '70px' }}>Color fondo:</span>
+                          <input
+                            type="color"
+                            value={colorFondoEtiquetas}
+                            onChange={(e) => setColorFondoEtiquetas(e.target.value)}
+                            style={{ width: '35px', height: '25px' }}
+                          />
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', minWidth: '70px' }}>Tamaño:</span>
+                          <input
+                            type="range"
+                            min="8"
+                            max="24"
+                            value={tamanoFuente}
+                            onChange={(e) => setTamanoFuente(parseInt(e.target.value))}
+                            style={{ flex: 1 }}
+                          />
+                          <span style={{ fontSize: '12px', minWidth: '35px' }}>{tamanoFuente}px</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', minWidth: '70px' }}>Padding:</span>
+                          <input
+                            type="range"
+                            min="2"
+                            max="16"
+                            value={paddingEtiquetas}
+                            onChange={(e) => setPaddingEtiquetas(parseInt(e.target.value))}
+                            style={{ flex: 1 }}
+                          />
+                          <span style={{ fontSize: '12px', minWidth: '35px' }}>{paddingEtiquetas}px</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', minWidth: '70px' }}>Radio:</span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="12"
+                            value={borderRadiusEtiquetas}
+                            onChange={(e) => setBorderRadiusEtiquetas(parseInt(e.target.value))}
+                            style={{ flex: 1 }}
+                          />
+                          <span style={{ fontSize: '12px', minWidth: '35px' }}>{borderRadiusEtiquetas}px</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  </div>
                   
-                  {mostrarEtiquetas && (
-                    <div style={{ marginLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', minWidth: '70px' }}>Color texto:</span>
-                        <input
-                          type="color"
-                          value={colorEtiquetas}
-                          onChange={(e) => setColorEtiquetas(e.target.value)}
-                          style={{ width: '35px', height: '25px' }}
-                        />
-                      </div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', minWidth: '70px' }}>Color fondo:</span>
-                        <input
-                          type="color"
-                          value={colorFondoEtiquetas}
-                          onChange={(e) => setColorFondoEtiquetas(e.target.value)}
-                          style={{ width: '35px', height: '25px' }}
-                        />
-                      </div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', minWidth: '70px' }}>Tamaño:</span>
-                        <input
-                          type="range"
-                          min="8"
-                          max="24"
-                          value={tamanoFuente}
-                          onChange={(e) => setTamanoFuente(parseInt(e.target.value))}
-                          style={{ flex: 1 }}
-                        />
-                        <span style={{ fontSize: '12px', minWidth: '35px' }}>{tamanoFuente}px</span>
-                      </div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', minWidth: '70px' }}>Padding:</span>
-                        <input
-                          type="range"
-                          min="2"
-                          max="16"
-                          value={paddingEtiquetas}
-                          onChange={(e) => setPaddingEtiquetas(parseInt(e.target.value))}
-                          style={{ flex: 1 }}
-                        />
-                        <span style={{ fontSize: '12px', minWidth: '35px' }}>{paddingEtiquetas}px</span>
-                      </div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', minWidth: '70px' }}>Radio:</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="12"
-                          value={borderRadiusEtiquetas}
-                          onChange={(e) => setBorderRadiusEtiquetas(parseInt(e.target.value))}
-                          style={{ flex: 1 }}
-                        />
-                        <span style={{ fontSize: '12px', minWidth: '35px' }}>{borderRadiusEtiquetas}px</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
 
               {/* Título */}
-              {tipoActual.tipo !== 'card' && (
+              {(tipoActual.tipo as any) !== 'card' && (tipoActual.tipo as any) !== 'cardIndicadores' && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     📝 Título
@@ -842,7 +1218,7 @@ function App() {
               )}
 
               {/* Leyenda */}
-              {tipoActual.tipo !== 'card' && (
+              {(tipoActual.tipo as any) !== 'card' && (tipoActual.tipo as any) !== 'cardIndicadores' && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     🔤 Leyenda
@@ -880,7 +1256,7 @@ function App() {
               )}
 
               {/* Ejes */}
-              {!['pie', 'doughnut', 'polarArea', 'card'].includes(tipoActual.tipo) && (
+              {!['pie', 'doughnut', 'polarArea', 'card', 'gauge', 'cardIndicadores'].includes(tipoActual.tipo) && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     📊 Ejes
@@ -907,8 +1283,774 @@ function App() {
                 </div>
               )}
 
+              {/* Configuración específica del Tacómetro */}
+              {tipoActual.tipo === 'gauge' && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
+                    ⚙️ Configuración del Tacómetro
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                        Labels (separados por comas):
+                      </label>
+                      <input
+                        type="text"
+                        value={tacometroLabels}
+                        onChange={(e) => setTacometroLabels(e.target.value)}
+                        placeholder="0-70,70-90,90-100"
+                        style={{ 
+                          width: '100%',
+                          padding: '6px 8px', 
+                          borderRadius: '4px', 
+                          border: '1px solid #ccc',
+                          fontSize: '12px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                        Colores (separados por comas):
+                      </label>
+                      <input
+                        type="text"
+                        value={tacometroColors}
+                        onChange={(e) => setTacometroColors(e.target.value)}
+                        placeholder="#d32f2f,#fbc02d,#388e3c"
+                        style={{ 
+                          width: '100%',
+                          padding: '6px 8px', 
+                          borderRadius: '4px', 
+                          border: '1px solid #ccc',
+                          fontSize: '12px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                        Valor del tacómetro {(() => {
+                          const datosValidados = datosValidadosTacometro;
+                          if (!datosValidados) return '(0-100):';
+                          
+                          const ranges = datosValidados.labels.map((label: string) => {
+                            const [from, to] = label.split('-').map((v: string) => parseFloat(v.trim()));
+                            return { from: from || 0, to: to || 100 };
+                          });
+                          const valorMaximo = Math.max(...ranges.map(range => range.to));
+                          return `(0-${valorMaximo}):`;
+                        })()}
+                      </label>
+                      <input
+                        type="number"
+                        value={tacometroValue}
+                        onChange={(e) => setTacometroValue(parseFloat(e.target.value) || 0)}
+                        min="0"
+                        max={(() => {
+                          const datosValidados = datosValidadosTacometro;
+                          if (!datosValidados) return 100;
+                          
+                          const ranges = datosValidados.labels.map((label: string) => {
+                            const [from, to] = label.split('-').map((v: string) => parseFloat(v.trim()));
+                            return { from: from || 0, to: to || 100 };
+                          });
+                          return Math.max(...ranges.map(range => range.to));
+                        })()}
+                        style={{ 
+                          width: '100%',
+                          padding: '6px 8px', 
+                          borderRadius: '4px', 
+                          border: '1px solid #ccc',
+                          fontSize: '12px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={tacometroShowValue}
+                          onChange={(e) => setTacometroShowValue(e.target.checked)}
+                        />
+                        <span style={{ fontSize: '12px' }}>Mostrar valor en el centro</span>
+                      </label>
+                      
+                      {tacometroShowValue && (
+                        <div style={{ marginLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                              Color del valor:
+                            </label>
+                            <input
+                              type="color"
+                              value={tacometroValueColor}
+                              onChange={(e) => setTacometroValueColor(e.target.value)}
+                              style={{ 
+                                width: '100%',
+                                height: '30px',
+                                padding: '2px', 
+                                borderRadius: '4px', 
+                                border: '1px solid #ccc'
+                              }}
+                            />
+                          </div>
+                          
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                              Tamaño de fuente ({tacometroValueFontSize}px):
+                            </label>
+                            <input
+                              type="range"
+                              min="12"
+                              max="48"
+                              value={tacometroValueFontSize}
+                              onChange={(e) => setTacometroValueFontSize(parseInt(e.target.value))}
+                              style={{ 
+                                width: '100%'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={tacometroIsPercent}
+                          onChange={(e) => setTacometroIsPercent(e.target.checked)}
+                        />
+                        <span style={{ fontSize: '12px' }}>Mostrar símbolo de porcentaje (%)</span>
+                      </label>
+                    </div>
+                    
+                    {/* Configuración del símbolo personalizado cuando no es porcentaje */}
+                    {!tacometroIsPercent && (
+                      <div style={{
+                        backgroundColor: '#f0f8ff',
+                        border: '1px solid #b3d9ff',
+                        borderRadius: '6px',
+                        padding: '12px',
+                        marginTop: '12px'
+                      }}>
+                        <h5 style={{ 
+                          margin: '0 0 10px 0', 
+                          fontSize: '12px', 
+                          fontWeight: 600, 
+                          color: '#0066cc' 
+                        }}>
+                          💰 Símbolo Personalizado
+                        </h5>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <input
+                                type="checkbox"
+                                checked={tacometroShowSymbol}
+                                onChange={(e) => setTacometroShowSymbol(e.target.checked)}
+                              />
+                              <span style={{ fontSize: '12px' }}>Mostrar símbolo personalizado</span>
+                            </label>
+                          </div>
+                          
+                          {tacometroShowSymbol && (
+                            <div style={{ marginLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                                  Símbolo:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={tacometroSymbol}
+                                  onChange={(e) => setTacometroSymbol(e.target.value)}
+                                  placeholder="ej: $, €, £, ¥"
+                                  style={{ 
+                                    width: '100%',
+                                    padding: '4px 8px', 
+                                    borderRadius: '4px', 
+                                    border: '1px solid #ccc',
+                                    fontSize: '12px'
+                                  }}
+                                />
+                              </div>
+                              
+                              <div>
+                                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                                  Posición del símbolo:
+                                </label>
+                                <select
+                                  value={tacometroSymbolPosition}
+                                  onChange={(e) => setTacometroSymbolPosition(e.target.value as 'before' | 'after')}
+                                  style={{ 
+                                    width: '100%',
+                                    padding: '4px 8px', 
+                                    borderRadius: '4px', 
+                                    border: '1px solid #ccc',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  <option value="before">Antes del valor (ej: $1100)</option>
+                                  <option value="after">Después del valor (ej: 1100$)</option>
+                                </select>
+                              </div>
+                              
+                              <div style={{ 
+                                padding: '8px', 
+                                backgroundColor: '#e8f5e8', 
+                                border: '1px solid #4caf50', 
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                color: '#2e7d32'
+                              }}>
+                                <strong>Vista previa:</strong> {tacometroSymbolPosition === 'before' 
+                                  ? `${tacometroSymbol}${tacometroValue}` 
+                                  : `${tacometroValue}${tacometroSymbol}`}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Configuración del estilo del contenedor */}
+                    <div style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      padding: '12px',
+                      marginTop: '12px'
+                    }}>
+                      <h5 style={{ 
+                        margin: '0 0 10px 0', 
+                        fontSize: '12px', 
+                        fontWeight: 600, 
+                        color: '#475569' 
+                      }}>
+                        🎨 Estilo del Contenedor
+                      </h5>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Color de fondo:
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input
+                              type="color"
+                              value={tacometroBackgroundColor === 'transparent' ? '#ffffff' : tacometroBackgroundColor}
+                              onChange={(e) => setTacometroBackgroundColor(e.target.value)}
+                              style={{ 
+                                width: '40px',
+                                height: '30px',
+                                padding: '2px', 
+                                borderRadius: '4px', 
+                                border: '1px solid #ccc'
+                              }}
+                            />
+                            <button
+                              onClick={() => setTacometroBackgroundColor('transparent')}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '10px',
+                                backgroundColor: tacometroBackgroundColor === 'transparent' ? '#e3f2fd' : '#f5f5f5',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Transparente
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Radio del borde ({tacometroBorderRadius}px):
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="20"
+                            value={tacometroBorderRadius}
+                            onChange={(e) => setTacometroBorderRadius(parseInt(e.target.value))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Borde:
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input
+                              type="text"
+                              value={tacometroBorder}
+                              onChange={(e) => setTacometroBorder(e.target.value)}
+                              placeholder="ej: 1px solid #ccc"
+                              style={{ 
+                                flex: 1,
+                                padding: '4px 8px', 
+                                borderRadius: '4px', 
+                                border: '1px solid #ccc',
+                                fontSize: '11px'
+                              }}
+                            />
+                            <button
+                              onClick={() => setTacometroBorder('none')}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '10px',
+                                backgroundColor: tacometroBorder === 'none' ? '#e3f2fd' : '#f5f5f5',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Sin borde
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Padding ({tacometroPadding}px):
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="40"
+                            value={tacometroPadding}
+                            onChange={(e) => setTacometroPadding(parseInt(e.target.value))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {tacometroValidationError && (
+                      <div style={{ 
+                        padding: '8px', 
+                        backgroundColor: '#ffebee', 
+                        border: '1px solid #f44336', 
+                        borderRadius: '4px',
+                        color: '#d32f2f',
+                        fontSize: '12px'
+                      }}>
+                        {tacometroValidationError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Configuración específica del CardIndicadores */}
+              {tipoActual.tipo === 'cardIndicadores' && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
+                    🎯 Configuración de Card Indicadores
+                  </h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Botón para agregar nuevo indicador */}
+                    <button
+                      onClick={agregarIndicador}
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#2196F3',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + Agregar Indicador
+                    </button>
+
+                    {/* Configuraciones Globales */}
+                    <div style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      padding: '12px',
+                      marginBottom: '12px'
+                    }}>
+                      <h5 style={{ 
+                        margin: '0 0 10px 0', 
+                        fontSize: '12px', 
+                        fontWeight: 600, 
+                        color: '#475569' 
+                      }}>
+                        ⚙️ Configuraciones Globales
+                      </h5>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        {/* Alineación */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                            Alineación:
+                          </label>
+                          <select
+                            value={cardAlineacion}
+                            onChange={(e) => setCardAlineacion(e.target.value as 'left' | 'center' | 'right' | 'justify')}
+                            style={{
+                              width: '100%',
+                              padding: '4px 6px',
+                              fontSize: '11px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '3px'
+                            }}
+                          >
+                            <option value="left">Izquierda</option>
+                            <option value="center">Centro</option>
+                            <option value="right">Derecha</option>
+                            <option value="justify">Justificado</option>
+                          </select>
+                        </div>
+
+                        {/* Ancho */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                            Ancho:
+                          </label>
+                          <input
+                            type="text"
+                            value={cardAncho}
+                            onChange={(e) => setCardAncho(e.target.value)}
+                            placeholder="320px, 100%, auto"
+                            style={{
+                              width: '100%',
+                              padding: '4px 6px',
+                              fontSize: '11px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Padding */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                            Padding:
+                          </label>
+                          <input
+                            type="number"
+                            value={cardPadding}
+                            onChange={(e) => setCardPadding(parseInt(e.target.value) || 0)}
+                            style={{
+                              width: '100%',
+                              padding: '4px 6px',
+                              fontSize: '11px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Border Radius */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                            Border Radius:
+                          </label>
+                          <input
+                            type="number"
+                            value={cardBorderRadius}
+                            onChange={(e) => setCardBorderRadius(parseInt(e.target.value) || 0)}
+                            style={{
+                              width: '100%',
+                              padding: '4px 6px',
+                              fontSize: '11px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Background Color */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                            Color de Fondo:
+                          </label>
+                          <input
+                            type="color"
+                            value={cardBackgroundColor}
+                            onChange={(e) => setCardBackgroundColor(e.target.value)}
+                            style={{
+                              width: '100%',
+                              height: '25px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Border */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                            Borde:
+                          </label>
+                          <input
+                            type="text"
+                            value={cardBorder}
+                            onChange={(e) => setCardBorder(e.target.value)}
+                            placeholder="1px solid #e0e0e0"
+                            style={{
+                              width: '100%',
+                              padding: '4px 6px',
+                              fontSize: '11px',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Column Gap - Solo visible cuando alineación es justify */}
+                        {cardAlineacion === 'justify' && (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                              Espaciado Columnas:
+                            </label>
+                            <input
+                              type="number"
+                              value={cardColumnGap}
+                              onChange={(e) => setCardColumnGap(parseInt(e.target.value) || 16)}
+                              min="0"
+                              max="50"
+                              style={{
+                                width: '100%',
+                                padding: '4px 6px',
+                                fontSize: '11px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '3px'
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tabla de indicadores */}
+                    <div style={{ 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      backgroundColor: '#fff'
+                    }}>
+                      {cardIndicadores.map((indicador, index) => (
+                        <div key={index} style={{
+                          padding: '12px',
+                          borderBottom: index < cardIndicadores.length - 1 ? '1px solid #e5e7eb' : 'none',
+                          backgroundColor: index % 2 === 0 ? '#f9fafb' : '#fff'
+                        }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            marginBottom: '8px'
+                          }}>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+                              Indicador {index + 1}
+                            </span>
+                            <button
+                              onClick={() => eliminarIndicador(index)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+
+                          {/* Campo Icono */}
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                              Icono Material:
+                            </label>
+                            <input
+                              type="text"
+                              value={indicador.icono}
+                              onChange={(e) => actualizarIndicador(index, 'icono', e.target.value)}
+                              placeholder="home, star, favorite, etc."
+                              style={{
+                                width: '100%',
+                                padding: '4px 6px',
+                                fontSize: '11px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '3px'
+                              }}
+                            />
+                          </div>
+
+                          {/* Campo Nombre */}
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                              Nombre:
+                            </label>
+                            <input
+                              type="text"
+                              value={indicador.nombre}
+                              onChange={(e) => actualizarIndicador(index, 'nombre', e.target.value)}
+                              style={{
+                                width: '100%',
+                                padding: '4px 6px',
+                                fontSize: '11px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '3px'
+                              }}
+                            />
+                          </div>
+
+                          {/* Campo Valor y Checkbox Porcentaje */}
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                                Valor:
+                              </label>
+                              <input
+                                type="number"
+                                value={indicador.valor}
+                                onChange={(e) => actualizarIndicador(index, 'valor', parseFloat(e.target.value) || 0)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px 6px',
+                                  fontSize: '11px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '3px'
+                                }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'end' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={indicador.isPercent}
+                                  onChange={(e) => actualizarIndicador(index, 'isPercent', e.target.checked)}
+                                />
+                                %
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Colores */}
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                                Color Icono:
+                              </label>
+                              <input
+                                type="color"
+                                value={indicador.iconoColor}
+                                onChange={(e) => actualizarIndicador(index, 'iconoColor', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  height: '25px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '3px'
+                                }}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                                Color Nombre:
+                              </label>
+                              <input
+                                type="color"
+                                value={indicador.nombreColor}
+                                onChange={(e) => actualizarIndicador(index, 'nombreColor', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  height: '25px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '3px'
+                                }}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                                Color Valor:
+                              </label>
+                              <input
+                                type="color"
+                                value={indicador.valorColor}
+                                onChange={(e) => actualizarIndicador(index, 'valorColor', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  height: '25px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '3px'
+                                }}
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Tamaños de Fuente */}
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                                Tamaño Icono ({indicador.iconoTamano}px):
+                              </label>
+                              <input
+                                type="range"
+                                min="12"
+                                max="32"
+                                value={indicador.iconoTamano}
+                                onChange={(e) => actualizarIndicador(index, 'iconoTamano', parseInt(e.target.value))}
+                                style={{
+                                  width: '100%',
+                                  height: '20px'
+                                }}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                                Tamaño Nombre ({indicador.nombreTamano}px):
+                              </label>
+                              <input
+                                type="range"
+                                min="10"
+                                max="24"
+                                value={indicador.nombreTamano}
+                                onChange={(e) => actualizarIndicador(index, 'nombreTamano', parseInt(e.target.value))}
+                                style={{
+                                  width: '100%',
+                                  height: '20px'
+                                }}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
+                                Tamaño Valor ({indicador.valorTamano}px):
+                              </label>
+                              <input
+                                type="range"
+                                min="10"
+                                max="28"
+                                value={indicador.valorTamano}
+                                onChange={(e) => actualizarIndicador(index, 'valorTamano', parseInt(e.target.value))}
+                                style={{
+                                  width: '100%',
+                                  height: '20px'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Dimensiones */}
-              {tipoActual.tipo !== 'card' && (
+              {tipoActual.tipo !== 'card' && tipoActual.tipo !== 'cardIndicadores' && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     📐 Dimensiones
@@ -935,7 +2077,7 @@ function App() {
                 </div>
               )}
             </div>
-
+  
             {/* Columna derecha - Gráfico y Código */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
@@ -951,6 +2093,8 @@ function App() {
                 <div 
                   className="grafico-wrapper"
                   style={{
+                    display: 'flex',
+                    justifyContent: 'center',
                     backgroundColor: '#ffffff',
                     border: '2px solid #e9ecef',
                     borderRadius: '12px',
@@ -959,8 +2103,6 @@ function App() {
                     maxWidth: '100%',
                     overflow: 'hidden',
                     ...(tipoActual.tipo === 'card' ? {
-                      display: 'flex',
-                      justifyContent: 'center',
                       alignItems: 'center'
                     } : {
                       position: 'relative'
@@ -969,10 +2111,89 @@ function App() {
                 >
                   <Grafico
                     tipo={tipoActual.tipo}
-                    data={tipoActual.datos}
+                    data={tipoActual.tipo === 'gauge' ? (() => {
+                      const datosValidados = datosValidadosTacometro;
+                      if (!datosValidados) {
+                        return tipoActual.datos;
+                      }
+                      return {
+                        labels: datosValidados.labels,
+                        datasets: [{
+                          data: datosValidados.labels.map(() => 1), // Datos dummy para cada segmento
+                          backgroundColor: datosValidados.backgroundColor,
+                          borderWidth: 0,
+                          cutout: '80%',
+                          circumference: 180,
+                          rotation: 270,
+                        }]
+                      };
+                    })() : tipoActual.datos}
                     mostrarEtiquetas={mostrarEtiquetas}
-                    mostrarEjeX={mostrarEjeXControl}
-                    mostrarEjeY={mostrarEjeYControl}
+                    mostrarEjeX={tipoActual.tipo === 'gauge' ? undefined : mostrarEjeXControl}
+                    mostrarEjeY={tipoActual.tipo === 'gauge' ? undefined : mostrarEjeYControl}
+                    gaugeProps={tipoActual.tipo === 'gauge' ? (() => {
+                      const datosValidados = datosValidadosTacometro;
+                      
+                      // Construir containerStyle con los valores actuales
+                      const containerStyle = {
+                        backgroundColor: tacometroBackgroundColor,
+                        borderRadius: tacometroBorderRadius,
+                        border: tacometroBorder,
+                        padding: tacometroPadding
+                      };
+                      
+                      if (!datosValidados) {
+                        // Si hay error de validación, usar datos por defecto
+                        const valorLimitado = Math.min(tacometroValue, 100); // Limitar a 100% máximo
+                        return {
+                          ranges: [
+                            { from: 0, to: 70, color: '#d32f2f' },
+                            { from: 70, to: 90, color: '#fbc02d' },
+                            { from: 90, to: 100, color: '#388e3c' }
+                          ],
+                          value: valorLimitado,
+                          originalValue: tacometroValue, // Valor original para mostrar en el centro
+                          showLabels: mostrarEtiquetas,
+                          showValue: tacometroShowValue,
+                          valueColor: tacometroValueColor,
+                          valueFontSize: tacometroValueFontSize,
+                          isPercent: tacometroIsPercent,
+                          containerStyle: containerStyle,
+                          showSymbol: tacometroShowSymbol,
+                          symbol: tacometroSymbol,
+                          symbolPosition: tacometroSymbolPosition
+                        };
+                      }
+                      
+                      // Generar ranges basados en los datos validados
+                      const ranges = datosValidados.labels.map((label: string, index: number) => {
+                        const [from, to] = label.split('-').map((v: string) => parseFloat(v.trim()));
+                        return {
+                          from: from || index * 10,
+                          to: to || (index + 1) * 10,
+                          color: datosValidados.backgroundColor[index]
+                        };
+                      });
+                      
+                      // Calcular el valor máximo de los ranges para limitar el valor
+                      const valorMaximo = Math.max(...ranges.map(range => range.to));
+                      const valorLimitado = Math.min(tacometroValue, valorMaximo);
+                      
+                      return {
+                        ranges,
+                        value: valorLimitado,
+                        originalValue: tacometroValue, // Valor original para mostrar en el centro
+                        showLabels: mostrarEtiquetas,
+                        showValue: tacometroShowValue,
+                        valueColor: tacometroValueColor,
+                        valueFontSize: tacometroValueFontSize,
+                        isPercent: tacometroIsPercent,
+                        containerStyle: containerStyle,
+                        showSymbol: tacometroShowSymbol,
+                        symbol: tacometroSymbol,
+                        symbolPosition: tacometroSymbolPosition
+                      };
+                    })() : undefined}
                     configEtiquetas={{
                       color: colorEtiquetas,
                       backgroundColor: colorFondoEtiquetas,
@@ -988,6 +2209,16 @@ function App() {
                       colorScheme: "success",
                       showBorder: true,
                       borderColor: "#e5e7eb"
+                    } : undefined}
+                    cardIndicadoresProps={tipoActual.tipo === 'cardIndicadores' ? {
+                      indicadores: generateCardIndicadoresData().indicadores,
+                      alineacion: cardAlineacion,
+                      ancho: cardAncho,
+                      padding: cardPadding,
+                      backgroundColor: cardBackgroundColor,
+                      borderRadius: cardBorderRadius,
+                      border: cardBorder,
+                      columnGap: cardColumnGap
                     } : undefined}
                     options={tipoActual.opciones ? {
                       ...tipoActual.opciones,
@@ -1032,8 +2263,7 @@ function App() {
                 </div>
               </div>
             </div>
-          </div>
-
+          </div>         
           <div className="grafico-demo">
             <div className="codigo-ejemplo">
               <h3>💻 Código de Ejemplo Dinámico</h3>
@@ -1079,8 +2309,8 @@ function App() {
                   <Grafico
                     tipo={info.tipo}
                     data={info.datos}
-                    mostrarEjeX={info.tipo === 'horizontalBar' ? false : true}
-                    mostrarEjeY={['bar', 'line', 'barrasAgrupadas', 'barrasApiladas', 'area', 'multiEje'].includes(info.tipo) ? false : true}
+                    mostrarEjeX={info.tipo === 'horizontalBar' ? false : info.tipo === 'gauge' ? undefined : true}
+                    mostrarEjeY={['bar', 'line', 'barrasAgrupadas', 'barrasApiladas', 'area', 'multiEje'].includes(info.tipo) ? false : info.tipo === 'gauge' ? undefined : true}
                     mostrarEtiquetas={true}
                     configEtiquetas={{
                       color: '#333333fa',
@@ -1097,6 +2327,12 @@ function App() {
                       colorScheme: "success",
                       showBorder: true,
                       borderColor: "#e5e7eb"
+                    } : undefined}
+                    cardIndicadoresProps={info.tipo === 'cardIndicadores' ? {
+                      indicadores: datosCardIndicadores.indicadores,
+                      alineacion: 'left',
+                      ancho: '280px',
+                      padding: 12
                     } : undefined}
                     options={info.opciones ? {
                       ...info.opciones,
@@ -1121,6 +2357,9 @@ function App() {
                     style={info.tipo === 'card' ? { 
                       padding: '5px',
                       width: '40%',
+                    } : info.tipo === 'cardIndicadores' ? {
+                      padding: '5px',
+                      width: '90%',
                     } : {}}
                   />
                 </div>
@@ -1170,7 +2409,7 @@ import { Grafico, TipoGrafico, DatosGrafico } from 'react-charts-library';
           </div>
           
           <div style={{ marginTop: '20px', color: '#666' }}>
-            <p>📊 <strong>13 tipos de gráficos disponibles</strong> • ⚡ TypeScript incluido • 🎨 Totalmente personalizable</p>
+            <p>📊 <strong>14 tipos de gráficos disponibles</strong> • ⚡ TypeScript incluido • 🎨 Totalmente personalizable</p>
             <p>Construido con ❤️ usando Chart.js y React</p>
           </div>
         </div>

@@ -310,3 +310,70 @@ export const datosMultiEje: DatosGrafico = {
     },
   ],
 };
+
+// Datos para gráfico tipo gauge
+export const datosGauge: DatosGrafico = {
+  labels: ['0-70', '70-90', '90-100'],
+  datasets: [{
+    data: [70, 20, 10],
+    backgroundColor: ['#d32f2f', '#fbc02d', '#388e3c'],
+    borderWidth: 0,
+    cutout: '80%',
+    circumference: 180,
+    rotation: 270,
+  }],
+};
+
+// Datos para CardIndicadores
+export const datosCardIndicadores = {
+  indicadores: [
+    {
+      icono: 'show_chart',
+      nombre: 'YTD Cump Presup',
+      valor: 92,
+      isPercent: true,
+      iconoColor: '#f59e0b',
+      iconoTamano: 20,
+      nombreColor: '#374151',
+      nombreTamano: 14,
+      valorColor: '#1f2937',
+      valorTamano: 16
+    },
+    {
+      icono: 'trending_up',
+      nombre: 'MTH Cump Presup',
+      valor: 88,
+      isPercent: true,
+      iconoColor: '#10b981',
+      iconoTamano: 20,
+      nombreColor: '#374151',
+      nombreTamano: 14,
+      valorColor: '#1f2937',
+      valorTamano: 16
+    },
+    {
+      icono: 'arrow_upward',
+      nombre: 'YTD1 / YTD0 Crec %',
+      valor: 7,
+      isPercent: true,
+      iconoColor: '#3b82f6',
+      iconoTamano: 20,
+      nombreColor: '#374151',
+      nombreTamano: 14,
+      valorColor: '#1f2937',
+      valorTamano: 16
+    },
+    {
+      icono: 'north',
+      nombre: 'MTH1 / MTH0 Crec %',
+      valor: 5,
+      isPercent: true,
+      iconoColor: '#8b5cf6',
+      iconoTamano: 20,
+      nombreColor: '#374151',
+      nombreTamano: 14,
+      valorColor: '#1f2937',
+      valorTamano: 16
+    }
+  ]
+};
