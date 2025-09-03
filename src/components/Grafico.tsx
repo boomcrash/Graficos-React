@@ -78,9 +78,6 @@ export interface DatosGrafico {
   }>;
 }
 
-// Tipos para el peso de la fuente en Chart.js
-type ChartFontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
-
 // Interfaz para el contexto del formateador de etiquetas
 interface DataLabelsContext {
   dataIndex: number;

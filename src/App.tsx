@@ -131,13 +131,6 @@ function App() {
   const [cardColumnGap, setCardColumnGap] = useState<number>(16);
 
   // Funciones helper para CardIndicadores
-  const parseArrayInput = (input: string): string[] => {
-    return input.split(',').map(item => item.trim()).filter(item => item.length > 0);
-  };
-
-  const parseNumericArrayInput = (input: string): number[] => {
-    return input.split(',').map(item => parseFloat(item.trim())).filter(num => !isNaN(num));
-  };
 
   const generateCardIndicadoresData = () => {
     return {
