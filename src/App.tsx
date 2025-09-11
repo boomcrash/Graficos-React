@@ -17,7 +17,9 @@ import {
   datosArea,
   datosMultiEje,
   datosGauge,
-  datosCardIndicadores
+  datosCardIndicadores,
+  ejemplosNeedles,
+  gaugeBaseConfig
 } from './components';
 
 interface TipoGraficoInfo {
@@ -31,7 +33,7 @@ interface TipoGraficoInfo {
 
 function App() {
   const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoGrafico>('line');
-  const [vistaActual, setVistaActual] = useState<'demo' | 'galeria'>('demo');
+  const [vistaActual, setVistaActual] = useState<'demo' | 'galeria' | 'needles'>('demo');
   const [mostrarEtiquetas, setMostrarEtiquetas] = useState<boolean>(false);
   const [colorEtiquetas, setColorEtiquetas] = useState<string>('#000000');
   const [colorFondoEtiquetas, setColorFondoEtiquetas] = useState<string>('#ffffff');
@@ -55,7 +57,7 @@ function App() {
   const [tacometroValidationError, setTacometroValidationError] = useState<string>('');
   const [tacometroShowValue, setTacometroShowValue] = useState<boolean>(true);
   const [tacometroValueColor, setTacometroValueColor] = useState<string>('#333333');
-  const [tacometroValueFontSize, setTacometroValueFontSize] = useState<number>(24);
+  const [tacometroValueFontSize, setTacometroValueFontSize] = useState<number>(1);
   const [tacometroIsPercent, setTacometroIsPercent] = useState<boolean>(true);
 
   // Estados para el estilo del contenedor del tacómetro
@@ -68,6 +70,17 @@ function App() {
   const [tacometroShowSymbol, setTacometroShowSymbol] = useState<boolean>(false);
   const [tacometroSymbol, setTacometroSymbol] = useState<string>('$');
   const [tacometroSymbolPosition, setTacometroSymbolPosition] = useState<'before' | 'after'>('before');
+
+  // Estados para los valores min/max del tacómetro
+  const [tacometroShowMinMax, setTacometroShowMinMax] = useState<boolean>(true);
+  const [tacometroMinMaxColor, setTacometroMinMaxColor] = useState<string>('#666666');
+  const [tacometroMinMaxFontSize, setTacometroMinMaxFontSize] = useState<number>(1);
+
+  // Estados específicos para Needle (Aguja del tacómetro)
+  const [needleStyle, setNeedleStyle] = useState<'default' | 'arrow' | 'triangle' | 'diamond' | 'modern' | 'minimal'>('default');
+  const [needleColor, setNeedleColor] = useState<string>('#000000');
+  const [needleWidth, setNeedleWidth] = useState<number>(2);
+  const [needleLength, setNeedleLength] = useState<number>(0.9);
 
   // Estados específicos para CardIndicadores
   const [cardIndicadores, setCardIndicadores] = useState([
@@ -705,9 +718,9 @@ function App() {
     }`);
       }
       
-      return `{
+      return `{{
     ${opcionesPartes.join(',\n    ')}
-  }`;
+  }}`;
     };
 
     const alturaCode = alturaGrafico !== 400 ? `
@@ -945,6 +958,19 @@ ${indicadoresCode}
     showSymbol: true,
     symbol: '${tacometroSymbol}',
     symbolPosition: '${tacometroSymbolPosition}'` : '';
+
+        // Construir opciones de valores mínimo y máximo
+        const minMaxCode = tacometroShowMinMax ? `,
+    showMinMax: true,
+    minMaxColor: '${tacometroMinMaxColor}',
+    minMaxFontSize: ${tacometroMinMaxFontSize}` : '';
+
+        // Construir opciones del needle
+        const needleCode = `,
+    needleStyle: '${needleStyle}',
+    needleColor: '${needleColor}',
+    needleWidth: ${needleWidth},
+    needleLength: ${needleLength}`;
         
         return `
   gaugeProps={{
@@ -958,7 +984,7 @@ ${indicadoresCode}
     showValue: ${tacometroShowValue},
     valueColor: '${tacometroValueColor}',
     valueFontSize: ${tacometroValueFontSize},
-    isPercent: ${tacometroIsPercent}${containerStyleCode}${symbolCode}
+    isPercent: ${tacometroIsPercent}${containerStyleCode}${symbolCode}${minMaxCode}${needleCode}
   }}`;
       }
       
@@ -1000,6 +1026,19 @@ ${indicadoresCode}
     showSymbol: true,
     symbol: '${tacometroSymbol}',
     symbolPosition: '${tacometroSymbolPosition}'` : '';
+
+      // Construir opciones de valores mínimo y máximo
+      const minMaxCode = tacometroShowMinMax ? `,
+    showMinMax: true,
+    minMaxColor: '${tacometroMinMaxColor}',
+    minMaxFontSize: ${tacometroMinMaxFontSize}` : '';
+
+      // Construir opciones del needle
+      const needleCode = `,
+    needleStyle: '${needleStyle}',
+    needleColor: '${needleColor}',
+    needleWidth: ${needleWidth},
+    needleLength: ${needleLength}`;
       
       return `
   gaugeProps={{
@@ -1011,7 +1050,7 @@ ${rangesString}
     showValue: ${tacometroShowValue},
     valueColor: '${tacometroValueColor}',
     valueFontSize: ${tacometroValueFontSize},
-    isPercent: ${tacometroIsPercent}${containerStyleCode}${symbolCode}
+    isPercent: ${tacometroIsPercent}${containerStyleCode}${symbolCode}${minMaxCode}${needleCode}
   }}`;
     })() : '';
 
@@ -1040,6 +1079,18 @@ ${rangesString}
             onClick={() => setVistaActual('galeria')}
           >
             🎨 Galería Completa
+          </button>
+          <button
+            className={`nav-button ${vistaActual === 'needles' ? 'active' : ''}`}
+            onClick={() => setVistaActual('needles')}
+          >
+            ⚡ Estilos de Aguja
+          </button>
+          <button
+            className={`nav-button ${vistaActual === 'needles' ? 'active' : ''}`}
+            onClick={() => setVistaActual('needles')}
+          >
+            ⚡ Estilos de Aguja
           </button>
         </nav>
       </header>
@@ -1392,11 +1443,11 @@ ${rangesString}
                           
                           <div>
                             <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
-                              Tamaño de fuente ({tacometroValueFontSize}px):
+                              Tamaño de fuente ({tacometroValueFontSize}rem):
                             </label>
                             <input
                               type="range"
-                              min="12"
+                              min="0.1"
                               max="48"
                               value={tacometroValueFontSize}
                               onChange={(e) => setTacometroValueFontSize(parseInt(e.target.value))}
@@ -1621,6 +1672,82 @@ ${rangesString}
                             style={{ width: '100%' }}
                           />
                         </div>
+
+                        {/* Configuración de valores mínimo y máximo */}
+                        <div style={{ 
+                          marginTop: '16px', 
+                          padding: '12px', 
+                          backgroundColor: '#f8f9fa', 
+                          borderRadius: '6px',
+                          border: '1px solid #dee2e6'
+                        }}>
+                          <h4 style={{ 
+                            margin: '0 0 12px 0', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#495057' 
+                          }}>
+                            Valores Mínimo y Máximo
+                          </h4>
+
+                          <div style={{ marginBottom: '12px' }}>
+                            <label style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={tacometroShowMinMax}
+                                onChange={(e) => setTacometroShowMinMax(e.target.checked)}
+                                style={{ marginRight: '6px' }}
+                              />
+                              Mostrar valores mín/máx en los extremos
+                            </label>
+                          </div>
+
+                          {tacometroShowMinMax && (
+                            <>
+                              <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                                  Color de valores mín/máx:
+                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <input
+                                    type="color"
+                                    value={tacometroMinMaxColor}
+                                    onChange={(e) => setTacometroMinMaxColor(e.target.value)}
+                                    style={{ 
+                                      width: '30px', 
+                                      height: '30px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer'
+                                    }}
+                                  />
+                                  <span style={{ fontSize: '11px', color: '#666' }}>
+                                    {tacometroMinMaxColor}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                                  Tamaño de fuente mín/máx ({tacometroMinMaxFontSize}px):
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="20"
+                                  value={tacometroMinMaxFontSize}
+                                  onChange={(e) => setTacometroMinMaxFontSize(parseInt(e.target.value))}
+                                  style={{ width: '100%' }}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
@@ -1636,6 +1763,120 @@ ${rangesString}
                         {tacometroValidationError}
                       </div>
                     )}
+                    
+                    {/* Configuración del Needle (Aguja) */}
+                    <div style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      padding: '12px',
+                      marginTop: '12px'
+                    }}>
+                      <h5 style={{ 
+                        margin: '0 0 10px 0', 
+                        fontSize: '12px', 
+                        fontWeight: 600, 
+                        color: '#475569' 
+                      }}>
+                        🎯 Configuración de la Aguja
+                      </h5>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {/* Tipo de aguja */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Estilo de aguja:
+                          </label>
+                          <select
+                            value={needleStyle}
+                            onChange={(e) => setNeedleStyle(e.target.value as any)}
+                            style={{ 
+                              width: '100%',
+                              padding: '6px 8px', 
+                              borderRadius: '4px', 
+                              border: '1px solid #ccc',
+                              fontSize: '12px'
+                            }}
+                          >
+                            <option value="default">🔹 Default - Línea simple</option>
+                            <option value="arrow">🏹 Arrow - Con punta de flecha</option>
+                            <option value="triangle">🔺 Triangle - Triangular</option>
+                            <option value="diamond">💎 Diamond - Forma de diamante</option>
+                            <option value="modern">✨ Modern - Estilo moderno</option>
+                            <option value="minimal">⚪ Minimal - Minimalista</option>
+                          </select>
+                        </div>
+                        
+                        {/* Color de la aguja */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Color de la aguja:
+                          </label>
+                          <input
+                            type="color"
+                            value={needleColor}
+                            onChange={(e) => setNeedleColor(e.target.value)}
+                            style={{ 
+                              width: '100%',
+                              height: '30px',
+                              padding: '2px', 
+                              borderRadius: '4px', 
+                              border: '1px solid #ccc'
+                            }}
+                          />
+                        </div>
+                        
+                        {/* Grosor de la aguja */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Grosor ({needleWidth}px):
+                          </label>
+                          <input
+                            type="range"
+                            min="1"
+                            max="8"
+                            value={needleWidth}
+                            onChange={(e) => setNeedleWidth(parseInt(e.target.value))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        
+                        {/* Longitud de la aguja */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Longitud ({Math.round(needleLength * 100)}%):
+                          </label>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="1"
+                            step="0.05"
+                            value={needleLength}
+                            onChange={(e) => setNeedleLength(parseFloat(e.target.value))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        
+                        {/* Vista previa del estilo */}
+                        <div style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '4px',
+                          padding: '8px',
+                          marginTop: '8px'
+                        }}>
+                          <div style={{
+                            fontSize: '11px',
+                            color: '#2e7d32',
+                            textAlign: 'center'
+                          }}>
+                            <strong>Configuración actual:</strong><br/>
+                            {needleStyle.charAt(0).toUpperCase() + needleStyle.slice(1)} • 
+                            {needleColor} • {needleWidth}px • {Math.round(needleLength * 100)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1646,6 +1887,21 @@ ${rangesString}
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     🎯 Configuración de Card Indicadores
                   </h4>
+                  
+                  {/* Nota sobre tamaños responsivos */}
+                  <div style={{
+                    backgroundColor: '#e8f5e8',
+                    border: '1px solid #4caf50',
+                    borderRadius: '4px',
+                    padding: '8px',
+                    marginBottom: '12px',
+                    fontSize: '11px',
+                    color: '#2e7d32'
+                  }}>
+                    <strong>📱 Adaptación automática:</strong> Los tamaños de iconos y textos se convierten automáticamente a medidas responsivas que se adaptan al tamaño del contenedor.
+                    <br />
+                    <strong>🧪 Para probar:</strong> Usa el slider "Ancho rápido" arriba para cambiar el tamaño del contenedor y ver cómo se adaptan los elementos.
+                  </div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {/* Botón para agregar nuevo indicador */}
@@ -1723,6 +1979,33 @@ ${rangesString}
                               borderRadius: '3px'
                             }}
                           />
+                        </div>
+
+                        {/* Control de ancho rápido con slider */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', marginBottom: '3px', color: '#6b7280' }}>
+                            Ancho rápido (px):
+                          </label>
+                          <input
+                            type="range"
+                            min="200"
+                            max="800"
+                            step="20"
+                            value={parseInt(cardAncho.replace('px', '')) || 320}
+                            onChange={(e) => setCardAncho(`${e.target.value}px`)}
+                            style={{
+                              width: '100%',
+                              height: '20px'
+                            }}
+                          />
+                          <div style={{ 
+                            fontSize: '9px', 
+                            color: '#6b7280', 
+                            textAlign: 'center',
+                            marginTop: '2px'
+                          }}>
+                            {parseInt(cardAncho.replace('px', '')) || 320}px
+                          </div>
                         </div>
 
                         {/* Padding */}
@@ -1984,11 +2267,11 @@ ${rangesString}
                             </div>
                           </div>
                           
-                          {/* Tamaños de Fuente */}
+                          {/* Tamaños de Fuente - Valores responsivos automáticos */}
                           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <div style={{ flex: 1 }}>
                               <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
-                                Tamaño Icono ({indicador.iconoTamano}px):
+                                Tamaño Icono ({indicador.iconoTamano}):
                               </label>
                               <input
                                 type="range"
@@ -2004,7 +2287,7 @@ ${rangesString}
                             </div>
                             <div style={{ flex: 1 }}>
                               <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
-                                Tamaño Nombre ({indicador.nombreTamano}px):
+                                Tamaño Nombre ({indicador.nombreTamano}):
                               </label>
                               <input
                                 type="range"
@@ -2020,7 +2303,7 @@ ${rangesString}
                             </div>
                             <div style={{ flex: 1 }}>
                               <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: '#6b7280' }}>
-                                Tamaño Valor ({indicador.valorTamano}px):
+                                Tamaño Valor ({indicador.valorTamano}):
                               </label>
                               <input
                                 type="range"
@@ -2092,7 +2375,7 @@ ${rangesString}
                     border: '2px solid #e9ecef',
                     borderRadius: '12px',
                     padding: '20px',
-                    width: '100%',
+                    width: tipoActual.tipo === 'cardIndicadores' ? cardAncho : '100%',
                     maxWidth: '100%',
                     overflow: 'hidden',
                     ...(tipoActual.tipo === 'card' ? {
@@ -2154,7 +2437,15 @@ ${rangesString}
                           containerStyle: containerStyle,
                           showSymbol: tacometroShowSymbol,
                           symbol: tacometroSymbol,
-                          symbolPosition: tacometroSymbolPosition
+                          symbolPosition: tacometroSymbolPosition,
+                          showMinMax: tacometroShowMinMax,
+                          minMaxColor: tacometroMinMaxColor,
+                          minMaxFontSize: tacometroMinMaxFontSize,
+                          // Propiedades del needle
+                          needleStyle: needleStyle,
+                          needleColor: needleColor,
+                          needleWidth: needleWidth,
+                          needleLength: needleLength
                         };
                       }
                       
@@ -2184,7 +2475,15 @@ ${rangesString}
                         containerStyle: containerStyle,
                         showSymbol: tacometroShowSymbol,
                         symbol: tacometroSymbol,
-                        symbolPosition: tacometroSymbolPosition
+                        symbolPosition: tacometroSymbolPosition,
+                        showMinMax: tacometroShowMinMax,
+                        minMaxColor: tacometroMinMaxColor,
+                        minMaxFontSize: tacometroMinMaxFontSize,
+                        // Propiedades del needle
+                        needleStyle: needleStyle,
+                        needleColor: needleColor,
+                        needleWidth: needleWidth,
+                        needleLength: needleLength
                       };
                     })() : undefined}
                     configEtiquetas={{
@@ -2206,7 +2505,7 @@ ${rangesString}
                     cardIndicadoresProps={tipoActual.tipo === 'cardIndicadores' ? {
                       indicadores: generateCardIndicadoresData().indicadores,
                       alineacion: cardAlineacion,
-                      ancho: cardAncho,
+                      ancho: '100%', // Usar 100% para que tome el ancho del wrapper
                       padding: cardPadding,
                       backgroundColor: cardBackgroundColor,
                       borderRadius: cardBorderRadius,
@@ -2407,6 +2706,119 @@ import { Grafico, TipoGrafico, DatosGrafico } from 'react-charts-library';
           </div>
         </div>
       </footer>
+
+      {vistaActual === 'needles' && (
+        <main style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '30px', color: '#333' }}>
+            ⚡ Estilos de Aguja para Gauge
+          </h2>
+          <p style={{ textAlign: 'center', marginBottom: '40px', color: '#666', fontSize: '16px' }}>
+            Elige entre 6 estilos diferentes de agujas para personalizar tus gráficos gauge
+          </p>
+          
+          <div className="galeria-grid" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '30px',
+            marginBottom: '40px' 
+          }}>
+            {ejemplosNeedles.map((ejemplo, index) => (
+              <div key={index} className="grafico-card" style={{
+                border: '2px solid #e1e8ed',
+                borderRadius: '12px',
+                padding: '20px',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s ease'
+              }}>
+                <div className="card-header" style={{ marginBottom: '20px' }}>
+                  <h3 style={{ 
+                    color: '#2c3e50', 
+                    margin: '0 0 8px 0',
+                    fontSize: '18px',
+                    fontWeight: '600'
+                  }}>
+                    {ejemplo.titulo}
+                  </h3>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#7f8c8d',
+                    backgroundColor: '#f8f9fa',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    display: 'inline-block'
+                  }}>
+                    needleStyle: '{ejemplo.needleStyle}'
+                  </div>
+                </div>
+                
+                <div className="card-grafico" style={{ height: '250px', marginBottom: '15px' }}>
+                  <Grafico
+                    tipo="gauge"
+                    gaugeProps={{
+                      ...gaugeBaseConfig,
+                      needleStyle: ejemplo.needleStyle,
+                      needleColor: ejemplo.needleColor,
+                      needleWidth: ejemplo.needleWidth,
+                      needleLength: ejemplo.needleLength
+                    }}
+                    height="250px"
+                    width="100%"
+                  />
+                </div>
+                
+                <div style={{ 
+                  backgroundColor: '#f8f9fa',
+                  padding: '10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontFamily: 'Monaco, Consolas, monospace'
+                }}>
+                  <div>needleColor: <span style={{ color: ejemplo.needleColor, fontWeight: 'bold' }}>{ejemplo.needleColor}</span></div>
+                  <div>needleWidth: {ejemplo.needleWidth}</div>
+                  <div>needleLength: {ejemplo.needleLength}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ 
+            backgroundColor: '#f8f9fa', 
+            padding: '20px', 
+            borderRadius: '8px',
+            border: '1px solid #dee2e6'
+          }}>
+            <h3 style={{ color: '#495057', marginBottom: '15px' }}>💡 Cómo usar los estilos de aguja</h3>
+            <pre style={{ 
+              backgroundColor: '#ffffff',
+              padding: '15px',
+              borderRadius: '6px',
+              border: '1px solid #dee2e6',
+              overflow: 'auto',
+              fontSize: '13px',
+              margin: 0
+            }}>
+{`<Grafico
+  tipo="gauge"
+  gaugeProps={{
+    ranges: [
+      { from: 0, to: 30, color: '#e74c3c' },
+      { from: 30, to: 70, color: '#f39c12' },
+      { from: 70, to: 100, color: '#27ae60' }
+    ],
+    value: 75,
+    needleStyle: 'arrow',      // 'default' | 'arrow' | 'triangle' | 'diamond' | 'modern' | 'minimal'
+    needleColor: '#e74c3c',    // Color de la aguja
+    needleWidth: 3,            // Grosor de la aguja
+    needleLength: 0.85,        // Longitud como porcentaje del radio (0-1)
+    showValue: true,
+    isPercent: true
+  }}
+/>`}
+            </pre>
+          </div>
+        </main>
+      )}
     </div>
   );
 }

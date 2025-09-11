@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -73,7 +73,6 @@ export interface DatosGrafico {
     tension?: number;
     pointRadius?: number;
     pointHoverRadius?: number;
-    // Permitir propiedades adicionales para diferentes tipos de gráficos
     [key: string]: any;
   }>;
 }
@@ -133,7 +132,7 @@ export interface OpcionesGrafico {
 // Props del componente Grafico
 export interface GraficoProps {
   tipo: TipoGrafico;
-  data: DatosGrafico;
+  data?: DatosGrafico;
   options?: OpcionesGrafico;
   width?: string;
   height?: string;
@@ -159,6 +158,7 @@ export interface GraficoProps {
     mostrarPorcentaje?: boolean; // Para gráficos circulares, mostrar porcentaje (por defecto: true)
     formatoNumero?: 'default' | 'currency' | 'percent' | 'decimal'; // Formato de número
     decimales?: number; // Número de decimales a mostrar (por defecto: 1)
+    isPercent?: boolean; // Si los valores son porcentajes y deben mostrar el símbolo % (por defecto: false)
   };
   // Props específicas para Card cuando tipo === 'card'
   cardProps?: {
@@ -208,6 +208,15 @@ export interface GraficoProps {
     showSymbol?: boolean; // Mostrar símbolo cuando isPercent es false
     symbol?: string; // El símbolo a mostrar (ej: '$', '€', etc.)
     symbolPosition?: 'before' | 'after'; // Posición del símbolo
+    // Nuevas props para valores min/max en los extremos
+    showMinMax?: boolean; // Mostrar valores mínimo y máximo en los extremos del semicírculo
+    minMaxColor?: string; // Color de los valores min/max (por defecto usa valueColor)
+    minMaxFontSize?: number; // Tamaño de fuente de los valores min/max (por defecto 60% del valueFontSize)
+    // Props para personalización de la aguja/flecha
+    needleStyle?: 'default' | 'arrow' | 'triangle' | 'diamond' | 'modern' | 'minimal'; // Tipo de aguja
+    needleColor?: string; // Color de la aguja (por defecto '#000')
+    needleWidth?: number; // Grosor de la aguja (por defecto 2)
+    needleLength?: number; // Longitud de la aguja como porcentaje del radio (por defecto 0.9)
   };
   // Props específicas para el gráfico tipo cardIndicadores
   cardIndicadoresProps?: {
@@ -217,17 +226,17 @@ export interface GraficoProps {
       valor: string | number;
       isPercent?: boolean;
       iconoColor?: string;
-      iconoTamano?: number;
+      iconoTamano?: number; // Solo número, no string
       nombreColor?: string;
-      nombreTamano?: number;
+      nombreTamano?: number; // Solo número, no string
       valorColor?: string;
-      valorTamano?: number;
+      valorTamano?: number; // Solo número, no string
     }>;
     alineacion?: 'left' | 'center' | 'right' | 'justify';
     ancho?: string | number;
-    padding?: number;
+    padding?: number | string;
     backgroundColor?: string;
-    borderRadius?: number;
+    borderRadius?: number | string;
     border?: string;
     columnGap?: number; // Espaciado entre columnas para modo justify
   };
@@ -256,36 +265,139 @@ export interface CardProps {
 }
 
 // Mapeo de tipos de gráficos a componentes
-// Plugin para dibujar la aguja del gauge
+// Funciones para dibujar diferentes tipos de agujas
+const drawNeedleStyles = {
+  default: (ctx: CanvasRenderingContext2D, length: number, width: number, color: string) => {
+    // Aguja simple (línea recta)
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(length, 0);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  },
+
+  arrow: (ctx: CanvasRenderingContext2D, length: number, width: number, color: string) => {
+    // Aguja con punta de flecha
+    const arrowSize = width * 3;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(length - arrowSize, 0);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    
+    // Punta de flecha
+    ctx.beginPath();
+    ctx.moveTo(length - arrowSize, -arrowSize/2);
+    ctx.lineTo(length, 0);
+    ctx.lineTo(length - arrowSize, arrowSize/2);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  },
+
+  triangle: (ctx: CanvasRenderingContext2D, length: number, width: number, color: string) => {
+    // Aguja triangular completa
+    ctx.beginPath();
+    ctx.moveTo(0, -width/2);
+    ctx.lineTo(length, 0);
+    ctx.lineTo(0, width/2);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  },
+
+  diamond: (ctx: CanvasRenderingContext2D, length: number, width: number, color: string) => {
+    // Aguja en forma de diamante
+    const midPoint = length * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(midPoint, -width/2);
+    ctx.lineTo(length, 0);
+    ctx.lineTo(midPoint, width/2);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  },
+
+  modern: (ctx: CanvasRenderingContext2D, length: number, width: number, color: string) => {
+    // Aguja moderna con gradiente
+    const gradient = ctx.createLinearGradient(0, 0, length, 0);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, color + '80'); // Semi-transparente al final
+    
+    ctx.beginPath();
+    ctx.moveTo(0, -width/3);
+    ctx.lineTo(length * 0.8, -width/4);
+    ctx.lineTo(length, 0);
+    ctx.lineTo(length * 0.8, width/4);
+    ctx.lineTo(0, width/3);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  },
+
+  minimal: (ctx: CanvasRenderingContext2D, length: number, width: number, color: string) => {
+    // Aguja minimalista (línea fina con punto)
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(length * 0.95, 0);
+    ctx.lineWidth = width * 0.5;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    
+    // Punto al final
+    ctx.beginPath();
+    ctx.arc(length * 0.95, 0, width, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+};
+
+// Plugin mejorado para dibujar la aguja del gauge
 const needlePlugin = {
   id: 'needle',
   afterDatasetDraw(chart: any, args: any, options: any) {
-    const { needleValue, maxValue } = options;
+    const { 
+      needleValue, 
+      maxValue, 
+      needleStyle = 'default',
+      needleColor = '#000',
+      needleWidth = 2,
+      needleLength = 0.9
+    } = options;
+    
     const angle = Math.PI + (Math.PI * needleValue) / maxValue;
 
     const cx = chart._metasets[0].data[0].x;
     const cy = chart._metasets[0].data[0].y;
     const r = chart._metasets[0].data[0].outerRadius;
 
-    const needleLength = r * 0.9;
-    const needleRadius = 3;
+    const length = r * needleLength;
+    const needleRadius = Math.max(needleWidth + 2, 5); // Círculo base más grande y mínimo de 5px
 
     const ctx = chart.ctx;
     ctx.save();
 
     ctx.translate(cx, cy);
     ctx.rotate(angle);
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(needleLength, 0);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#000';
-    ctx.stroke();
 
+    // Dibujar la aguja según el estilo seleccionado
+    drawNeedleStyles[needleStyle as keyof typeof drawNeedleStyles](ctx, length, needleWidth, needleColor);
+
+    // Centro de la aguja (círculo base) - más prominente
     ctx.beginPath();
     ctx.arc(0, 0, needleRadius, 0, Math.PI * 2);
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = needleColor;
     ctx.fill();
+    
+    // Añadir un borde al círculo base para mejor visibilidad
+    ctx.beginPath();
+    ctx.arc(0, 0, needleRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = needleColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
     ctx.restore();
   },
@@ -302,17 +414,17 @@ interface CardIndicadoresComponentProps {
     valor: string | number;
     isPercent?: boolean;
     iconoColor?: string;
-    iconoTamano?: number;
+    iconoTamano?: number; // Solo número, no string
     nombreColor?: string;
-    nombreTamano?: number;
+    nombreTamano?: number; // Solo número, no string
     valorColor?: string;
-    valorTamano?: number;
+    valorTamano?: number; // Solo número, no string
   }>;
   alineacion?: 'left' | 'center' | 'right' | 'justify';
   ancho?: string | number;
-  padding?: number;
+  padding?: number | string;
   backgroundColor?: string;
-  borderRadius?: number;
+  borderRadius?: number | string;
   border?: string;
   columnGap?: number; // Espaciado entre columnas para modo justify
   className?: string;
@@ -322,7 +434,7 @@ interface CardIndicadoresComponentProps {
 const CardIndicadores: React.FC<CardIndicadoresComponentProps> = ({
   indicadores,
   alineacion = 'left',
-  ancho = '300px',
+  ancho = '100%',
   padding = 0,
   backgroundColor = 'transparent',
   borderRadius = 0,
@@ -331,13 +443,79 @@ const CardIndicadores: React.FC<CardIndicadoresComponentProps> = ({
   className = '',
   style = {}
 }) => {
+  const [containerWidth, setContainerWidth] = useState<number>(320); // Ancho por defecto
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // ResizeObserver para monitorear el tamaño del contenedor
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const { width } = entry.contentRect;
+        setContainerWidth(width);
+      }
+    });
+
+    resizeObserver.observe(element);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // Función auxiliar para convertir tamaños de iconos a responsive basado en el ancho real del contenedor
+  const getResponsiveSize = (size: number | undefined, defaultSize: number): string => {
+    const numSize = typeof size === 'number' ? size : defaultSize;
+    
+    // Factor de escala basado en el ancho del contenedor
+    // Contenedor de 320px = factor 1, escalando proporcionalmente
+    const scaleFactor = Math.min(Math.max(containerWidth / 320, 0.5), 2); // Entre 0.5x y 2x
+    const scaledSize = numSize * scaleFactor;
+    
+    // Convertir a rem (asumiendo 16px = 1rem)
+    const remSize = scaledSize / 16;
+    const minSize = Math.max(0.75, remSize * 0.7);
+    const maxSize = remSize * 1.3;
+    
+    return `clamp(${minSize}rem, ${remSize}rem, ${maxSize}rem)`;
+  };
+
+  // Función auxiliar para convertir tamaños de texto a responsive basado en el ancho real del contenedor
+  const getResponsiveTextSize = (size: number | undefined, defaultSize: number): string => {
+    const numSize = typeof size === 'number' ? size : defaultSize;
+    
+    // Factor de escala basado en el ancho del contenedor
+    const scaleFactor = Math.min(Math.max(containerWidth / 320, 0.6), 1.8); // Entre 0.6x y 1.8x
+    const scaledSize = numSize * scaleFactor;
+    
+    // Convertir a rem
+    const remSize = scaledSize / 16;
+    const minSize = Math.max(0.625, remSize * 0.8);
+    const maxSize = remSize * 1.2;
+    
+    return `clamp(${minSize}rem, ${remSize}rem, ${maxSize}rem)`;
+  };
+
   const containerStyle: React.CSSProperties = {
-    width: ancho,
-    padding: `${padding}px`,
+    width: typeof ancho === 'number' ? `${ancho}%` : ancho,
+    padding: typeof padding === 'number' ? `${padding * 0.25}rem` : padding,
     backgroundColor,
-    borderRadius: `${borderRadius}px`,
+    borderRadius: typeof borderRadius === 'number' ? `${borderRadius * 0.0625}rem` : borderRadius,
     border,
+    // Contenedor principal - sin overflow
+    overflow: 'hidden',
+    boxSizing: 'border-box',
     ...style
+  };
+
+  // Estilos para el contenedor interno (95% del ancho)
+  const innerContainerStyle: React.CSSProperties = {
+    width: '95%',
+    maxWidth: '100%',
+    margin: '0 auto',
+    boxSizing: 'border-box'
   };
 
   const getAlineacionStyle = (): React.CSSProperties => {
@@ -350,7 +528,8 @@ const CardIndicadores: React.FC<CardIndicadoresComponentProps> = ({
         return { 
           display: 'grid',
           gridTemplateColumns: `auto 1fr auto`,
-          gap: `${columnGap}px`,
+          gap: `clamp(0.5rem, ${columnGap * 0.0625}rem, 2rem)`, // Gap responsive
+          alignContent:'space-around',
           alignItems: 'center'
         };
       default:
@@ -361,38 +540,46 @@ const CardIndicadores: React.FC<CardIndicadoresComponentProps> = ({
   // Renderizado para modo justify (formato de tabla con columnas)
   if (alineacion === 'justify') {
     return (
-        <div className={`card-indicadores ${className}`} style={containerStyle}>
+      <div ref={containerRef} className={`card-indicadores ${className}`} style={containerStyle}>
+        <div style={innerContainerStyle}>
           {indicadores.map((indicador, index) => (
             <div
               key={index}
               style={{
                 display: 'grid',
                 gridTemplateColumns: `auto 1fr auto`,
-                gap: `${columnGap}px`,
+                gap: `clamp(0.25rem, ${columnGap * 0.0625}rem, 1rem)`, // Gap más conservador
                 alignItems: 'center',
-                marginBottom: index < indicadores.length - 1 ? '12px' : '0',
+                marginBottom: index < indicadores.length - 1 ? `${Math.max(4, containerWidth * 0.01)}px` : '0',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
             >
               {/* Columna 1: Ícono */}
               <span
                 className="material-icons"
                 style={{
-                  fontSize: `${indicador.iconoTamano || 20}px`,
+                  fontSize: getResponsiveSize(indicador.iconoTamano, 20),
                   color: indicador.iconoColor || '#666666',
                   lineHeight: 1,
-                  justifySelf: 'start'
+                  justifySelf: 'start',
+                  flexShrink: 0
                 }}
               >
                 {indicador.icono}
               </span>
               
-              {/* Columna 2: Nombre (ocupa el espacio disponible) */}
+              {/* Columna 2: Nombre (ocupa el espacio disponible pero con límites) */}
               <span
                 style={{
-                  fontSize: `${indicador.nombreTamano || 14}px`,
+                  fontSize: getResponsiveTextSize(indicador.nombreTamano, 14),
                   color: indicador.nombreColor || '#000000',
                   fontWeight: 500,
-                  justifySelf: 'start'
+                  justifySelf: 'start',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0 // Permite que el flex item se encoja
                 }}
               >
                 {indicador.nombre}
@@ -401,10 +588,12 @@ const CardIndicadores: React.FC<CardIndicadoresComponentProps> = ({
               {/* Columna 3: Valor */}
               <span
                 style={{
-                  fontSize: `${indicador.valorTamano || 14}px`,
+                  fontSize: getResponsiveTextSize(indicador.valorTamano, 14),
                   color: indicador.valorColor || '#000000',
                   fontWeight: 600,
-                  justifySelf: 'end'
+                  justifySelf: 'end',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {indicador.valor}{indicador.isPercent ? '%' : ''}
@@ -412,59 +601,72 @@ const CardIndicadores: React.FC<CardIndicadoresComponentProps> = ({
             </div>
           ))}
         </div>
+      </div>
     );
   }
 
   // Renderizado para modos tradicionales (left, center, right)
   return (
-    <div className={`card-indicadores ${className}`} style={containerStyle}>
-      {indicadores.map((indicador, index) => (
-        <div
-          key={index}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: index < indicadores.length - 1 ? '12px' : '0',
-            ...getAlineacionStyle()
-          }}
-        >
-          {/* Ícono de Material Icons */}
-          <span
-            className="material-icons"
+    <div ref={containerRef} className={`card-indicadores ${className}`} style={containerStyle}>
+      <div style={innerContainerStyle}>
+        {indicadores.map((indicador, index) => (
+          <div
+            key={index}
             style={{
-              fontSize: `${indicador.iconoTamano || 20}px`,
-              color: indicador.iconoColor || '#666666',
-              marginRight: '8px',
-              lineHeight: 1
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: index < indicadores.length - 1 ? `${Math.max(4, containerWidth * 0.01)}px` : '0',
+              width: '100%',
+              boxSizing: 'border-box',
+              ...getAlineacionStyle()
             }}
           >
-            {indicador.icono}
-          </span>
-          
-          {/* Nombre del indicador */}
-          <span
-            style={{
-              fontSize: `${indicador.nombreTamano || 14}px`,
-              color: indicador.nombreColor || '#000000',
-              marginRight: '8px',
-              fontWeight: 500
-            }}
-          >
-            {indicador.nombre}
-          </span>
-          
-          {/* Valor del indicador */}
-          <span
-            style={{
-              fontSize: `${indicador.valorTamano || 14}px`,
-              color: indicador.valorColor || '#000000',
-              fontWeight: 600
-            }}
-          >
-            {indicador.valor}{indicador.isPercent ? '%' : ''}
-          </span>
-        </div>
-      ))}
+            {/* Ícono de Material Icons */}
+            <span
+              className="material-icons"
+              style={{
+                fontSize: getResponsiveSize(indicador.iconoTamano, 20),
+                color: indicador.iconoColor || '#666666',
+                marginRight: `${Math.max(2, containerWidth * 0.005)}px`,
+                lineHeight: 1,
+                flexShrink: 0
+              }}
+            >
+              {indicador.icono}
+            </span>
+            
+            {/* Nombre del indicador */}
+            <span
+              style={{
+                fontSize: getResponsiveTextSize(indicador.nombreTamano, 14),
+                color: indicador.nombreColor || '#000000',
+                marginRight: `${Math.max(2, containerWidth * 0.005)}px`,
+                fontWeight: 500,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
+                flex: 1
+              }}
+            >
+              {indicador.nombre}
+            </span>
+            
+            {/* Valor del indicador */}
+            <span
+              style={{
+                fontSize: getResponsiveTextSize(indicador.valorTamano, 14),
+                color: indicador.valorColor || '#000000',
+                fontWeight: 600,
+                flexShrink: 0,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {indicador.valor}{indicador.isPercent ? '%' : ''}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -549,7 +751,7 @@ const Grafico: React.FC<GraficoProps> = ({
       <CardIndicadores
         indicadores={cardIndicadoresProps.indicadores}
         alineacion={cardIndicadoresProps.alineacion || 'left'}
-        ancho={cardIndicadoresProps.ancho || '300px'}
+        ancho={cardIndicadoresProps.ancho || '100%'}
         padding={cardIndicadoresProps.padding || 0}
         backgroundColor={cardIndicadoresProps.backgroundColor || 'transparent'}
         borderRadius={cardIndicadoresProps.borderRadius || 0}
@@ -564,7 +766,10 @@ const Grafico: React.FC<GraficoProps> = ({
 
   // Validar que el tipo de gráfico sea válido para gráficos normales
   const ChartComponent = chartComponents[tipo as keyof typeof chartComponents];
-  
+
+  const safeData: DatosGrafico | undefined = 
+  ChartComponent && data?.datasets?.length ? data : undefined;
+
   if (!ChartComponent) {
     const tiposDisponibles = Object.keys(chartComponents).join(', ');
     console.error(`Tipo de gráfico no válido: ${tipo}. Tipos disponibles: ${tiposDisponibles}`);
@@ -748,7 +953,15 @@ const Grafico: React.FC<GraficoProps> = ({
       containerStyle = {},
       showSymbol = false,
       symbol = '$',
-      symbolPosition = 'before'
+      symbolPosition = 'before',
+      showMinMax = true, // Por defecto mostrar min/max
+      minMaxColor,
+      minMaxFontSize,
+      // Nuevas propiedades para la aguja
+      needleStyle = 'default',
+      needleColor = '#000000',
+      needleWidth = 2,
+      needleLength = 0.9
     } = gaugeProps;
     const max = ranges[ranges.length - 1].to;
     
@@ -765,7 +978,14 @@ const Grafico: React.FC<GraficoProps> = ({
     const total = segments.reduce((sum, s) => sum + s.value, 0);
     const dataValues = segments.map(s => s.value / total);
     const colors = segments.map(s => s.color);
-    const labels = segments.map(s => `${s.from}-${s.to}`);
+    // Generar etiquetas con o sin símbolo de porcentaje según isPercent
+    const labels = segments.map(s => {
+      if (isPercent) {
+        return `${s.from}% - ${s.to}%`;
+      } else {
+        return `${s.from}-${s.to}`;
+      }
+    });
 
     data = {
       labels: labels,
@@ -786,6 +1006,14 @@ const Grafico: React.FC<GraficoProps> = ({
       cutout: '80%',
       responsive: options.responsive ?? true,
       maintainAspectRatio: options.maintainAspectRatio ?? false,
+      layout: {
+        padding: {
+          bottom: 40, // Espacio extra en la parte inferior para ver la aguja
+          top: 10,
+          left: 10,
+          right: 10
+        }
+      },
       plugins: {
         legend: {
           display: options.plugins?.legend?.display ?? true,
@@ -797,6 +1025,15 @@ const Grafico: React.FC<GraficoProps> = ({
         },
         tooltip: {
           enabled: options.plugins?.tooltip?.enabled ?? false,
+          callbacks: {
+            label: function(context: any) {
+              const dataIndex = context.dataIndex;
+              if (dataIndex !== undefined && labels[dataIndex]) {
+                return labels[dataIndex];
+              }
+              return '';
+            }
+          }
         },
         datalabels: showLabels ? {
           display: true,
@@ -806,15 +1043,57 @@ const Grafico: React.FC<GraficoProps> = ({
           borderRadius: configEtiquetas?.borderRadius || 6,
           borderWidth: 1,
           padding: configEtiquetas?.padding || 8,
+          z: 9999, // Z-index muy alto para que esté por encima de todo
           font: {
             size: configEtiquetas?.fontSize || 12,
             family: configEtiquetas?.fontFamily || 'Arial, sans-serif',
             weight: configEtiquetas?.fontWeight || 500,
           },
-          anchor: 'center',
-          align: 'center',
-          offset: 0,
-          formatter: (value: any, context: { dataIndex?: number }) => {
+          // Posicionamiento inteligente según la posición de la etiqueta
+          anchor: (context: { dataIndex?: number }) => {
+            if (context && typeof context.dataIndex === 'number') {
+              const totalSegments = labels.length;
+              const index = context.dataIndex;
+              
+              // Primera etiqueta (extremo izquierdo): anclaje a la derecha para que no se salga por la izquierda
+              if (index === 0) return 'end';
+              
+              // Última etiqueta (extremo derecho): anclaje a la izquierda para que no se salga por la derecha
+              if (index === totalSegments - 1) return 'start';
+              
+              // Etiquetas del medio: centrado normal
+              return 'center';
+            }
+            return 'center';
+          },
+          align: (context: { dataIndex?: number }) => {
+            if (context && typeof context.dataIndex === 'number') {
+              const totalSegments = labels.length;
+              const index = context.dataIndex;
+              
+              // Ajustar alineación para etiquetas extremas
+              if (index === 0) return 'end'; // Primera etiqueta hacia adentro
+              if (index === totalSegments - 1) return 'start'; // Última etiqueta hacia adentro
+              
+              return 'center'; // Etiquetas del medio centradas
+            }
+            return 'center';
+          },
+          offset: (context: { dataIndex?: number }) => {
+            if (context && typeof context.dataIndex === 'number') {
+              const totalSegments = labels.length;
+              const index = context.dataIndex;
+              
+              // Ajustar offset para etiquetas extremas para que no toquen el borde
+              if (index === 0 || index === totalSegments - 1) {
+                return 10; // Mayor offset para las etiquetas extremas
+              }
+              
+              return 0; // Sin offset para etiquetas centrales
+            }
+            return 0;
+          },
+          formatter: (_value: any, context: { dataIndex?: number }) => {
             if (context && typeof context.dataIndex === 'number' && labels[context.dataIndex]) {
               return labels[context.dataIndex];
             }
@@ -824,18 +1103,59 @@ const Grafico: React.FC<GraficoProps> = ({
         needle: {
           needleValue: limitedValue,  // Usar valor limitado para la aguja
           maxValue: max,
+          needleStyle: needleStyle,
+          needleColor: needleColor,
+          needleWidth: needleWidth,
+          needleLength: needleLength,
         },
       },
     };
 
+    // Calcular dimensiones responsive para mantener proporciones
+    const containerWidth = typeof width === 'string' && width.includes('px') 
+      ? parseInt(width.replace('px', '')) 
+      : typeof width === 'number' 
+      ? width 
+      : 931; // Ancho de referencia donde se ve perfecto
+
+    // Calcular factor de escala basado en el ancho de referencia (931px)
+    const scaleFactor = containerWidth / 931;
+    
+    // Altura proporcional manteniendo aspect ratio del diseño perfecto
+    const proportionalHeight = Math.max(200, 300 * scaleFactor);
+    
+    // Offset vertical responsive basado únicamente en el tamaño del contenedor
+    const getVerticalOffsetByContainer = ( scaleFactor: number) => {
+      
+      return 210 + (80 * scaleFactor); // Escalado más agresivo sin Math.min
+     
+    };
+
+    // Posiciones horizontales responsive para valores min/max basado en el tamaño del contenedor
+    const getHorizontalPositionsByContainer = () => {
+        return {
+          minLeft: '9%',
+          maxLeft: '93%'
+        };
+    };
+
+    const verticalOffset = getVerticalOffsetByContainer(scaleFactor);
+    const horizontalPositions = getHorizontalPositionsByContainer();
+
     // Estilos del contenedor específicos para gauge con valores por defecto transparentes
     const defaultContainerStyle: React.CSSProperties = {
       width: width || '100%',
-      height: height || '400px',
+      height: height || `${proportionalHeight + 40}px`, // Añadir 40px extra para la aguja
       backgroundColor: 'transparent', // Por defecto transparente
       borderRadius: 0, // Por defecto sin border radius
       border: 'none', // Por defecto sin borde
-      padding: 0, // Por defecto sin padding
+      padding: '0 0 30px 0', // Padding inferior para dar espacio a la aguja
+      position: 'relative', // Para permitir posicionamiento de etiquetas
+      zIndex: 9999, // Z-index alto para el contenedor
+      overflow: 'visible', // Cambiar a visible para que se vea la aguja
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-start', // Alinear al inicio para dar espacio abajo
       ...style,
     };
 
@@ -860,27 +1180,101 @@ const Grafico: React.FC<GraficoProps> = ({
     return (
       <div 
         className={`grafico-container ${className}`} 
-        style={{ ...defaultContainerStyle, position: 'relative' }}
+        style={defaultContainerStyle}
         data-chart-type={tipo}
       >
-        <ChartComponent 
-          data={data} 
-          options={finalOptions as any}
-          {...otherProps}
-        />
+        <div style={{ 
+          paddingBottom: '20px', // Espacio extra para la base de la aguja
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <ChartComponent 
+            data={data} 
+            options={finalOptions as any}
+            {...otherProps}
+          />
+        </div>
+        
+        {/* Valores mínimo y máximo en los extremos del semicírculo */}
+        {showMinMax && (
+          <>
+            {/* Valor mínimo (lado izquierdo del semicírculo) */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: horizontalPositions.minLeft,
+                transform: `translate(-50%, ${verticalOffset}%)`, // Offset proporcional
+                fontSize: `${minMaxFontSize || Math.max(12, valueFontSize * 0.6)}rem`,
+                fontWeight: '500',
+                color: minMaxColor || valueColor,
+                textAlign: 'center',
+                pointerEvents: 'none',
+                zIndex: 10001
+              }}
+            >
+              {(() => {
+                const minValue = ranges[0].from;
+                
+                if (isPercent) {
+                  return `${minValue}%`;
+                } else if (showSymbol) {
+                  return symbolPosition === 'before' 
+                    ? `${symbol}${minValue}`
+                    : `${minValue}${symbol}`;
+                } else {
+                  return minValue;
+                }
+              })()}
+            </div>
+
+            {/* Valor máximo (lado derecho del semicírculo) */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: horizontalPositions.maxLeft,
+                transform: `translate(-50%, ${verticalOffset}%)`, // Offset proporcional - ambos usan -50% para centrado perfecto
+                fontSize: `${minMaxFontSize || Math.max(12, valueFontSize * 0.6)}rem`,
+                fontWeight: '500',
+                color: minMaxColor || valueColor,
+                textAlign: 'center',
+                pointerEvents: 'none',
+                zIndex: 10001
+              }}
+            >
+              {(() => {
+                const maxValue = ranges[ranges.length - 1].to;
+                
+                if (isPercent) {
+                  return `${maxValue}%`;
+                } else if (showSymbol) {
+                  return symbolPosition === 'before' 
+                    ? `${symbol}${maxValue}`
+                    : `${maxValue}${symbol}`;
+                } else {
+                  return maxValue;
+                }
+              })()}
+            </div>
+          </>
+        )}
+
         {showValue && (
           <div
             style={{
               position: 'absolute',
               top: '50%',
               left: '50%',
-              transform: 'translate(-50%, 80%)', // -25% en Y para centrarlo en el semicírculo
-              fontSize: `${valueFontSize}px`,
+              transform: 'translate(-50%, 70%)', // Al mismo nivel que los valores min/max, pero un poco más arriba
+              fontSize: `${valueFontSize}rem`,
               fontWeight: 'bold',
               color: valueColor,
               textAlign: 'center',
               pointerEvents: 'none',
-              zIndex: 10
+              zIndex: 10000 // Z-index muy alto, mayor que las etiquetas
             }}
           >
             {(() => {
@@ -971,20 +1365,24 @@ const Grafico: React.FC<GraficoProps> = ({
         formatter: function(value: any, context: any) {
           const decimales = configEtiquetas.decimales || 1;
           const formato = configEtiquetas.formatoNumero || 'default';
+          const isPercent = configEtiquetas.isPercent || false;
           
           // Para gráficos de coordenadas (scatter, bubble)
           if (tipo === 'scatter') {
-            return `(${value.x}, ${value.y})`;
+            const displayValue = isPercent ? `(${value.x}%, ${value.y}%)` : `(${value.x}, ${value.y})`;
+            return displayValue;
           }
           if (tipo === 'bubble') {
-            return `(${value.x}, ${value.y}, ${value.r})`;
+            const displayValue = isPercent ? `(${value.x}%, ${value.y}%, ${value.r}%)` : `(${value.x}, ${value.y}, ${value.r})`;
+            return displayValue;
           }
           
           // Para gráficos circulares (pie, doughnut)
           if ((tipo === 'pie' || tipo === 'doughnut') && configEtiquetas.mostrarPorcentaje !== false) {
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(decimales);
-            return `${value}\n(${percentage}%)`;
+            const valueDisplay = isPercent ? `${value}%` : value;
+            return `${valueDisplay}\n(${percentage}%)`;
           }
           
           // Formateo de números según el tipo especificado
@@ -1020,6 +1418,11 @@ const Grafico: React.FC<GraficoProps> = ({
               }
           }
           
+          // Agregar símbolo de porcentaje si isPercent es true y formato no es 'percent'
+          if (isPercent && formato !== 'percent') {
+            formattedValue = `${formattedValue}%`;
+          }
+          
           return formattedValue;
         },
       }
@@ -1037,6 +1440,66 @@ const Grafico: React.FC<GraficoProps> = ({
       ...specificOptions.plugins,
       ...options.plugins,
       ...dataLabelsConfig.plugins, // Las etiquetas tienen la máxima prioridad
+      // Configuración de tooltips para manejar isPercent
+      tooltip: {
+        ...defaultOptions.plugins?.tooltip,
+        ...specificOptions.plugins?.tooltip,
+        ...options.plugins?.tooltip,
+        callbacks: {
+          ...options.plugins?.tooltip?.callbacks,
+          label: function(context: any) {
+            // Si el usuario ya definió su propio callback, usarlo
+            if (options.plugins?.tooltip?.callbacks?.label) {
+              return options.plugins.tooltip.callbacks.label(context);
+            }
+
+            const isPercent = configEtiquetas?.isPercent || false;
+            const value = context.parsed?.y !== undefined ? context.parsed.y : context.parsed;
+            const datasetLabel = context.dataset.label || '';
+            
+            // Formatear el valor base
+            let formattedValue = value;
+            const decimales = configEtiquetas?.decimales || 1;
+            const formato = configEtiquetas?.formatoNumero || 'default';
+            
+            // Aplicar formato según el tipo especificado
+            switch (formato) {
+              case 'currency':
+                formattedValue = new Intl.NumberFormat('es-ES', {
+                  style: 'currency',
+                  currency: 'EUR',
+                  minimumFractionDigits: decimales,
+                  maximumFractionDigits: decimales,
+                }).format(value);
+                break;
+              case 'percent':
+                formattedValue = new Intl.NumberFormat('es-ES', {
+                  style: 'percent',
+                  minimumFractionDigits: decimales,
+                  maximumFractionDigits: decimales,
+                }).format(value / 100);
+                break;
+              case 'decimal':
+                formattedValue = new Intl.NumberFormat('es-ES', {
+                  minimumFractionDigits: decimales,
+                  maximumFractionDigits: decimales,
+                }).format(value);
+                break;
+              default:
+                if (typeof value === 'number') {
+                  formattedValue = decimales === 0 ? Math.round(value).toString() : value.toFixed(decimales);
+                }
+            }
+
+            // Agregar símbolo de porcentaje si isPercent es true y formato no es 'percent'
+            if (isPercent && formato !== 'percent') {
+              formattedValue = `${formattedValue}%`;
+            }
+
+            return datasetLabel ? `${datasetLabel}: ${formattedValue}` : formattedValue;
+          }
+        }
+      }
     },
     scales: {
       ...defaultOptions.scales,
@@ -1059,7 +1522,7 @@ const Grafico: React.FC<GraficoProps> = ({
       data-chart-type={tipo}
     >
       <ChartComponent 
-        data={data} 
+        data={safeData as any}
         options={finalOptions as any} // Temporal fix para los tipos de Chart.js
         {...otherProps}
       />

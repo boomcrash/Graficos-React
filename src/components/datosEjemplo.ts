@@ -377,3 +377,67 @@ export const datosCardIndicadores = {
     }
   ]
 };
+
+// Ejemplos de diferentes estilos de aguja para gauge
+export const ejemplosNeedles = [
+  {
+    titulo: "Aguja Default",
+    needleStyle: 'default' as const,
+    needleColor: '#000000',
+    needleWidth: 2,
+    needleLength: 0.9
+  },
+  {
+    titulo: "Aguja Arrow",
+    needleStyle: 'arrow' as const,
+    needleColor: '#e74c3c',
+    needleWidth: 3,
+    needleLength: 0.85
+  },
+  {
+    titulo: "Aguja Triangle",
+    needleStyle: 'triangle' as const,
+    needleColor: '#3498db',
+    needleWidth: 4,
+    needleLength: 0.8
+  },
+  {
+    titulo: "Aguja Diamond",
+    needleStyle: 'diamond' as const,
+    needleColor: '#f39c12',
+    needleWidth: 5,
+    needleLength: 0.85
+  },
+  {
+    titulo: "Aguja Modern",
+    needleStyle: 'modern' as const,
+    needleColor: '#9b59b6',
+    needleWidth: 4,
+    needleLength: 0.9
+  },
+  {
+    titulo: "Aguja Minimal",
+    needleStyle: 'minimal' as const,
+    needleColor: '#2ecc71',
+    needleWidth: 2,
+    needleLength: 0.75
+  }
+];
+
+// Datos base para gauge con diferentes estilos de aguja
+export const gaugeBaseConfig = {
+  ranges: [
+    { from: 0, to: 30, color: '#e74c3c' },
+    { from: 30, to: 70, color: '#f39c12' },
+    { from: 70, to: 100, color: '#27ae60' }
+  ],
+  value: 75,
+  showLabels: true,
+  isPercent: true,
+  showValue: true,
+  valueColor: '#2c3e50',
+  valueFontSize: 20,
+  showMinMax: true,
+  minMaxColor: '#7f8c8d',
+  minMaxFontSize: 14
+};
