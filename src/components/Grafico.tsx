@@ -910,7 +910,7 @@ const ProgresoVertical: React.FC<ProgresoVerticalComponentProps> = ({
               }}
             >
               {isPercent
-                ? `${Math.round(((valorEnPosicion - minimo) / (maximo - minimo)) * 100)}%`
+                ? `${Math.round(valorEnPosicion)}%`
                 : symbolPosition === 'before'
                   ? `${symbol}${Math.round(valorEnPosicion)}`
                   : `${Math.round(valorEnPosicion)}${symbol}`}
