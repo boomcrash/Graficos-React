@@ -18,6 +18,7 @@ import {
   datosMultiEje,
   datosGauge,
   datosCardIndicadores,
+  // datosProgresoVertical,
   ejemplosNeedles,
   gaugeBaseConfig
 } from './components';
@@ -81,6 +82,24 @@ function App() {
   const [needleColor, setNeedleColor] = useState<string>('#000000');
   const [needleWidth, setNeedleWidth] = useState<number>(2);
   const [needleLength, setNeedleLength] = useState<number>(0.9);
+
+  // Estados específicos para ProgresoVertical
+  const [progresoValor, setProgresoValor] = useState<number>(75);
+  const [progresoMinimo, setProgresoMinimo] = useState<number>(0);
+  const [progresoMaximo, setProgresoMaximo] = useState<number>(100);
+  const [progresoIsPercent, setProgresoIsPercent] = useState<boolean>(true);
+  const [progresoSymbol, setProgresoSymbol] = useState<string>('$');
+  const [progresoSymbolPosition, setProgresoSymbolPosition] = useState<'before' | 'after'>('after');
+  const [progresoColorBar, setProgresoColorBar] = useState<string>('#4CAF50');
+  const [progresoBackgroundColor, setProgresoBackgroundColor] = useState<string>('transparent');
+  const [progresoBarWidth, setProgresoBarWidth] = useState<number>(40);
+  const [progresoHeight, setProgresoHeight] = useState<number>(300);
+  const [progresoShowValue, setProgresoShowValue] = useState<boolean>(true);
+  const [progresoValuePosition, setProgresoValuePosition] = useState<'top' | 'center' | 'bottom'>('top');
+  const [progresoSubdivisions, setProgresoSubdivisions] = useState<number>(10);
+  const [progresoShowSubdivisions, setProgresoShowSubdivisions] = useState<boolean>(true);
+  // Nuevo estado para mostrar/ocultar valores de división
+  const [progresoShowDivisionValues, setProgresoShowDivisionValues] = useState<boolean>(false);
 
   // Estados específicos para CardIndicadores
   const [cardIndicadores, setCardIndicadores] = useState([
@@ -623,6 +642,30 @@ function App() {
     padding: 0
   }}
 />`
+    },
+    {
+      tipo: 'progresoVertical',
+      nombre: 'Progreso Vertical',
+      descripcion: 'Barra vertical para mostrar progreso con subdivisiones. Ideal para mostrar porcentajes, valores monetarios o cualquier métrica de progreso.',
+      datos: null,
+      codigoEjemplo: `<Grafico
+  tipo="progresoVertical"
+  progresoVerticalProps={{
+    valor: 75,
+    maximo: 100,
+    minimo: 0,
+    isPercent: true,
+    colorBar: '#4CAF50',
+    backgroundColor: 'transparent',
+    barWidth: 40,
+    height: 300,
+    showValue: true,
+    valuePosition: 'top',
+    subdivisions: 10,
+    showSubdivisions: true,
+    showMinMax: true
+  }}
+/>`
     }
   ];
 
@@ -1054,9 +1097,43 @@ ${rangesString}
   }}`;
     })() : '';
 
+    // Generar progresoVerticalProps dinámico para el tipo progresoVertical
+    const progresoVerticalPropsCode = tipoActual.tipo === 'progresoVertical' ? (() => {
+      // Construir opciones de símbolo personalizado solo si no es porcentaje
+      const symbolCode = !progresoIsPercent ? `,
+    symbol: '${progresoSymbol}',
+    symbolPosition: '${progresoSymbolPosition}'` : '';
+
+      // Construir backgroundColor solo si no es transparente
+      const backgroundColorCode = progresoBackgroundColor !== 'transparent' ? `,
+    backgroundColor: '${progresoBackgroundColor}'` : '';
+
+      // Construir showSubdivisions y subdivisions
+      const subdivisionsCode = progresoShowSubdivisions ? `,
+    subdivisions: ${progresoSubdivisions},
+    showSubdivisions: true` : ',\n    showSubdivisions: false';
+
+      // Construir showDivisionValues
+      const divisionValuesCode = progresoShowDivisionValues ? `,
+    showDivisionValues: true` : '';
+      
+      return `
+  progresoVerticalProps={{
+    valor: ${progresoValor},
+    maximo: ${progresoMaximo},
+    minimo: ${progresoMinimo},
+    isPercent: ${progresoIsPercent}${symbolCode},
+    colorBar: '${progresoColorBar}'${backgroundColorCode},
+    barWidth: ${progresoBarWidth},
+    height: ${progresoHeight},
+    showValue: ${progresoShowValue},
+    valuePosition: '${progresoValuePosition}'${subdivisionsCode}${divisionValuesCode}
+  }}`;
+    })() : '';
+
     return `<Grafico
-  tipo="${tipoActual.tipo}"${tipoActual.tipo === 'gauge' ? '' : `
-  data=${formatearDatos()}`}${mostrarEtiquetasCode}${mostrarEjeXCode}${mostrarEjeYCode}${configEtiquetasCode}${gaugePropsCode}
+  tipo="${tipoActual.tipo}"${tipoActual.tipo === 'gauge' || tipoActual.tipo === 'progresoVertical' ? '' : `
+  data=${formatearDatos()}`}${mostrarEtiquetasCode}${mostrarEjeXCode}${mostrarEjeYCode}${configEtiquetasCode}${gaugePropsCode}${progresoVerticalPropsCode}
   options=${generarOpciones()}${alturaCode}
 />`;
   };
@@ -1144,7 +1221,7 @@ ${rangesString}
               </h3>
               
               {/* Etiquetas de Datos */}
-              {(tipoActual.tipo as any) !== 'cardIndicadores' && (
+              {(tipoActual.tipo as any) !== 'cardIndicadores' && (tipoActual.tipo as any) !== 'progresoVertical' && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     🏷️ Etiquetas de Datos
@@ -1262,7 +1339,7 @@ ${rangesString}
               )}
 
               {/* Leyenda */}
-              {(tipoActual.tipo as any) !== 'card' && (tipoActual.tipo as any) !== 'cardIndicadores' && (
+              {(tipoActual.tipo as any) !== 'card' && (tipoActual.tipo as any) !== 'cardIndicadores' && (tipoActual.tipo as any) !== 'progresoVertical' && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     🔤 Leyenda
@@ -1300,7 +1377,7 @@ ${rangesString}
               )}
 
               {/* Ejes */}
-              {!['pie', 'doughnut', 'polarArea', 'card', 'gauge', 'cardIndicadores'].includes(tipoActual.tipo) && (
+              {!['pie', 'doughnut', 'polarArea', 'card', 'gauge', 'cardIndicadores', 'progresoVertical'].includes(tipoActual.tipo) && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
                     📊 Ejes
@@ -1881,6 +1958,345 @@ ${rangesString}
                 </div>
               )}
 
+              {/* Configuración específica del Progreso Vertical */}
+              {tipoActual.tipo === 'progresoVertical' && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: '#555', fontSize: '14px', fontWeight: 600 }}>
+                    📊 Configuración del Progreso Vertical
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
+                    {/* Valor */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                        Valor actual:
+                      </label>
+                      <input
+                        type="number"
+                        value={progresoValor}
+                        onChange={(e) => setProgresoValor(parseFloat(e.target.value) || 0)}
+                        min={progresoMinimo}
+                        max={progresoMaximo}
+                        step="0.1"
+                        style={{ 
+                          width: '100%',
+                          padding: '6px 8px', 
+                          borderRadius: '4px', 
+                          border: '1px solid #ccc',
+                          fontSize: '12px'
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Rango Min/Max */}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                          Mínimo:
+                        </label>
+                        <input
+                          type="number"
+                          value={progresoMinimo}
+                          onChange={(e) => setProgresoMinimo(parseFloat(e.target.value) || 0)}
+                          style={{ 
+                            width: '100%',
+                            padding: '6px 8px', 
+                            borderRadius: '4px', 
+                            border: '1px solid #ccc',
+                            fontSize: '12px'
+                          }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                          Máximo:
+                        </label>
+                        <input
+                          type="number"
+                          value={progresoMaximo}
+                          onChange={(e) => setProgresoMaximo(parseFloat(e.target.value) || 100)}
+                          style={{ 
+                            width: '100%',
+                            padding: '6px 8px', 
+                            borderRadius: '4px', 
+                            border: '1px solid #ccc',
+                            fontSize: '12px'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Color de la barra */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                        Color de la barra:
+                      </label>
+                      <input
+                        type="color"
+                        value={progresoColorBar}
+                        onChange={(e) => setProgresoColorBar(e.target.value)}
+                        style={{ 
+                          width: '100%',
+                          height: '30px',
+                          padding: '2px', 
+                          borderRadius: '4px', 
+                          border: '1px solid #ccc'
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Dimensiones */}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                          Ancho de barra ({progresoBarWidth}px):
+                        </label>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={progresoBarWidth}
+                          onChange={(e) => setProgresoBarWidth(parseInt(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                          Altura ({progresoHeight}px):
+                        </label>
+                        <input
+                          type="range"
+                          min="100"
+                          max="500"
+                          value={progresoHeight}
+                          onChange={(e) => setProgresoHeight(parseInt(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Mostrar porcentaje o símbolo personalizado */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={progresoIsPercent}
+                          onChange={(e) => setProgresoIsPercent(e.target.checked)}
+                        />
+                        <span style={{ fontSize: '12px' }}>Mostrar porcentaje (%)</span>
+                      </label>
+                    </div>
+                    
+                    {/* Configuración del símbolo personalizado */}
+                    {!progresoIsPercent && (
+                      <div style={{
+                        backgroundColor: '#f0f8ff',
+                        border: '1px solid #b3d9ff',
+                        borderRadius: '6px',
+                        padding: '12px',
+                        marginTop: '8px'
+                      }}>
+                        <h5 style={{ 
+                          margin: '0 0 10px 0', 
+                          fontSize: '12px', 
+                          fontWeight: 600, 
+                          color: '#0066cc' 
+                        }}>
+                          💰 Símbolo Personalizado
+                        </h5>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                              Símbolo:
+                            </label>
+                            <input
+                              type="text"
+                              value={progresoSymbol}
+                              onChange={(e) => setProgresoSymbol(e.target.value)}
+                              placeholder="ej: $, €, puntos, unidades"
+                              style={{ 
+                                width: '100%',
+                                padding: '4px 8px', 
+                                borderRadius: '4px', 
+                                border: '1px solid #ccc',
+                                fontSize: '12px'
+                              }}
+                            />
+                          </div>
+                          
+                          <div>
+                            <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                              Posición del símbolo:
+                            </label>
+                            <select
+                              value={progresoSymbolPosition}
+                              onChange={(e) => setProgresoSymbolPosition(e.target.value as 'before' | 'after')}
+                              style={{ 
+                                width: '100%',
+                                padding: '4px 8px', 
+                                borderRadius: '4px', 
+                                border: '1px solid #ccc',
+                                fontSize: '12px'
+                              }}
+                            >
+                              <option value="before">Antes del valor (ej: $75)</option>
+                              <option value="after">Después del valor (ej: 75 puntos)</option>
+                            </select>
+                          </div>
+                          
+                          <div style={{ 
+                            padding: '8px', 
+                            backgroundColor: '#e8f5e8', 
+                            border: '1px solid #4caf50', 
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            color: '#2e7d32'
+                          }}>
+                            <strong>Vista previa:</strong> {progresoSymbolPosition === 'before' 
+                              ? `${progresoSymbol}${progresoValor}` 
+                              : `${progresoValor} ${progresoSymbol}`}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Mostrar valor */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={progresoShowValue}
+                          onChange={(e) => setProgresoShowValue(e.target.checked)}
+                        />
+                        <span style={{ fontSize: '12px' }}>Mostrar valor</span>
+                      </label>
+                      
+                      {progresoShowValue && (
+                        <div style={{ marginLeft: '20px', marginTop: '8px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Posición del valor:
+                          </label>
+                          <select
+                            value={progresoValuePosition}
+                            onChange={(e) => setProgresoValuePosition(e.target.value as 'top' | 'bottom' | 'center')}
+                            style={{ 
+                              width: '100%',
+                              padding: '4px 8px', 
+                              borderRadius: '4px', 
+                              border: '1px solid #ccc',
+                              fontSize: '12px'
+                            }}
+                          >
+                            <option value="top">Arriba de la barra</option>
+                            <option value="center">En el centro de la barra</option>
+                            <option value="bottom">Abajo de la barra</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Subdivisiones */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={progresoShowSubdivisions}
+                          onChange={(e) => setProgresoShowSubdivisions(e.target.checked)}
+                        />
+                        <span style={{ fontSize: '12px' }}>Mostrar subdivisiones</span>
+                      </label>
+                      
+                      {progresoShowSubdivisions && (
+                        <div style={{ marginLeft: '20px', marginTop: '8px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                            Intervalo de subdivisiones:
+                          </label>
+                          <input
+                            type="number"
+                            value={progresoSubdivisions}
+                            onChange={(e) => setProgresoSubdivisions(parseInt(e.target.value) || 10)}
+                            min="1"
+                            max="50"
+                            style={{ 
+                              width: '100%',
+                              padding: '4px 8px', 
+                              borderRadius: '4px', 
+                              border: '1px solid #ccc',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+
+                    {/* Mostrar valores de cada división (Y axis) */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={progresoShowDivisionValues}
+                          onChange={e => setProgresoShowDivisionValues(e.target.checked)}
+                        />
+                        <span style={{ fontSize: '12px' }}>Mostrar valores de cada división (Y axis)</span>
+                      </label>
+                    </div>
+                    
+                    {/* Color de fondo */}
+                    <div style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      padding: '12px',
+                      marginTop: '12px'
+                    }}>
+                      <h5 style={{ 
+                        margin: '0 0 10px 0', 
+                        fontSize: '12px', 
+                        fontWeight: 600, 
+                        color: '#475569' 
+                      }}>
+                        🎨 Color de Fondo
+                      </h5>
+                      
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={progresoBackgroundColor === 'transparent' ? '#ffffff' : progresoBackgroundColor}
+                          onChange={(e) => setProgresoBackgroundColor(e.target.value)}
+                          disabled={progresoBackgroundColor === 'transparent'}
+                          style={{ 
+                            width: '40px',
+                            height: '30px',
+                            padding: '2px', 
+                            borderRadius: '4px', 
+                            border: '1px solid #ccc',
+                            opacity: progresoBackgroundColor === 'transparent' ? 0.5 : 1
+                          }}
+                        />
+                        <button
+                          onClick={() => setProgresoBackgroundColor(
+                            progresoBackgroundColor === 'transparent' ? '#ffffff' : 'transparent'
+                          )}
+                          style={{
+                            padding: '4px 12px',
+                            fontSize: '11px',
+                            backgroundColor: progresoBackgroundColor === 'transparent' ? '#e3f2fd' : '#f5f5f5',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {progresoBackgroundColor === 'transparent' ? '✓ Transparente' : 'Usar Transparente'}
+                        </button>
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
+              )}
+
               {/* Configuración específica del CardIndicadores */}
               {tipoActual.tipo === 'cardIndicadores' && (
                 <div style={{ marginBottom: '20px' }}>
@@ -2365,7 +2781,21 @@ ${rangesString}
                     {tipoActual.descripcion}
                   </p>
                 </div>
-                
+
+                {/* Control para mostrar/ocultar valores de división en ProgresoVertical */}
+                {tipoActual.tipo === 'progresoVertical' && (
+                  <div style={{ margin: '8px 0' }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={progresoShowDivisionValues}
+                        onChange={e => setProgresoShowDivisionValues(e.target.checked)}
+                      /> Mostrar valores de cada división (Y axis)
+                    </label>
+                  </div>
+                )}
+
+                {/* Render del gráfico */}
                 <div 
                   className="grafico-wrapper"
                   style={{
@@ -2512,6 +2942,25 @@ ${rangesString}
                       border: cardBorder,
                       columnGap: cardColumnGap
                     } : undefined}
+                    progresoVerticalProps={tipoActual.tipo === 'progresoVertical' ? {
+                      valor: progresoValor,
+                      maximo: progresoMaximo,
+                      minimo: progresoMinimo,
+                      isPercent: progresoIsPercent,
+                      symbol: progresoSymbol,
+                      symbolPosition: progresoSymbolPosition,
+                      colorBar: progresoColorBar,
+                      backgroundColor: progresoBackgroundColor,
+                      barWidth: progresoBarWidth,
+                      height: progresoHeight,
+                      showValue: progresoShowValue,
+                      valuePosition: progresoValuePosition,
+                      subdivisions: progresoSubdivisions,
+                      showSubdivisions: progresoShowSubdivisions,
+                      showDivisionValues: progresoShowDivisionValues
+                    } : undefined}
+
+
                     options={tipoActual.opciones ? {
                       ...tipoActual.opciones,
                       responsive: true,
@@ -2625,6 +3074,20 @@ ${rangesString}
                       alineacion: 'left',
                       ancho: '280px',
                       padding: 12
+                    } : undefined}
+                    progresoVerticalProps={info.tipo === 'progresoVertical' ? {
+                      valor: 75,
+                      maximo: 100,
+                      minimo: 0,
+                      isPercent: true,
+                      colorBar: '#4CAF50',
+                      backgroundColor: 'transparent',
+                      barWidth: 40,
+                      height: 200,
+                      showValue: true,
+                      valuePosition: 'top',
+                      subdivisions: 10,
+                      showSubdivisions: true
                     } : undefined}
                     options={info.opciones ? {
                       ...info.opciones,

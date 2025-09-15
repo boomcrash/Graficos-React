@@ -441,3 +441,93 @@ export const gaugeBaseConfig = {
   minMaxColor: '#7f8c8d',
   minMaxFontSize: 14
 };
+
+// Datos para gráfico tipo progresoVertical
+export const datosProgresoVertical = {
+  // Ejemplo básico con porcentaje
+  basico: {
+    valor: 75,
+    maximo: 100,
+    minimo: 0,
+    isPercent: true,
+    colorBar: paletaColores.verdeEsmeralda,
+    showValue: true,
+    valuePosition: 'top' as const,
+    subdivisions: 10,
+    showSubdivisions: true
+  },
+  
+  // Ejemplo con valores monetarios
+  monetario: {
+    valor: 1250,
+    maximo: 2000,
+    minimo: 0,
+    isPercent: false,
+    symbol: '$',
+    symbolPosition: 'before' as const,
+    colorBar: '#2196F3',
+    backgroundColor: '#F5F5F5',
+    barWidth: 50,
+    height: 350,
+    showValue: true,
+    valuePosition: 'top' as const,
+    showMinMax: true,
+    subdivisions: 8
+  },
+  
+  // Ejemplo con diseño personalizado
+  personalizado: {
+    valor: 85,
+    maximo: 100,
+    minimo: 0,
+    isPercent: true,
+    colorBar: '#FF5722',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    barWidth: 60,
+    height: 400,
+    showValue: true,
+    valuePosition: 'center' as const,
+    valueColor: '#FFFFFF',
+    valueFontSize: 18,
+    borderRadius: 8,
+    subdivisions: 5,
+    subdivisionColor: '#FFFFFF',
+    showMinMax: true,
+    minMaxColor: '#666666'
+  },
+  
+  // Ejemplo minimalista
+  minimalista: {
+    valor: 45,
+    maximo: 100,
+    minimo: 0,
+    isPercent: true,
+    colorBar: paletaColores.verdeHierba,
+    backgroundColor: 'transparent',
+    barWidth: 30,
+    height: 250,
+    showValue: true,
+    valuePosition: 'bottom' as const,
+    showSubdivisions: false,
+    borderRadius: 15
+  },
+  
+  // Ejemplo con datos de ventas
+  ventas: {
+    valor: 87,
+    maximo: 100,
+    minimo: 0,
+    isPercent: true,
+    colorBar: '#4CAF50',
+    backgroundColor: '#E8F5E8',
+    barWidth: 45,
+    height: 320,
+    showValue: true,
+    valuePosition: 'top' as const,
+    subdivisions: 10,
+    showSubdivisions: true,
+    subdivisionColor: '#C8E6C9',
+    showMinMax: true,
+    borderRadius: 6
+  }
+};
