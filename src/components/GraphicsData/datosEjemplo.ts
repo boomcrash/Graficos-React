@@ -1,4 +1,4 @@
-import { DatosGrafico } from './Grafico';
+import { DatosGrafico } from '../Graphics/GraficoInterfaces';
 
 // Paleta de colores personalizada
 export const paletaColores = {
@@ -528,6 +528,46 @@ export const datosProgresoVertical = {
     showSubdivisions: true,
     subdivisionColor: '#C8E6C9',
     showMinMax: true,
+    borderRadius: 6
+  },
+
+  // Ejemplo con solo valores mínimo y máximo (nueva funcionalidad)
+  soloMinMax: {
+    valor: 65,
+    maximo: 100,
+    minimo: 0,
+    isPercent: true,
+    colorBar: '#9C27B0',
+    backgroundColor: '#F3E5F5',
+    barWidth: 40,
+    height: 300,
+    showValue: true,
+    valuePosition: 'center' as const,
+    subdivisions: 10,
+    showSubdivisions: true,
+    subdivisionColor: '#E1BEE7',
+    showMinMaxValues: true, // Nueva propiedad: solo muestra valores de inicio y fin
+    borderRadius: 4
+  },
+
+  // Ejemplo comparativo - con todas las divisiones
+  todasLasDivisiones: {
+    valor: 75,
+    maximo: 100,
+    minimo: 0,
+    isPercent: false,
+    symbol: '$',
+    symbolPosition: 'before' as const,
+    colorBar: '#FF9800',
+    backgroundColor: '#FFF3E0',
+    barWidth: 50,
+    height: 350,
+    showValue: true,
+    valuePosition: 'top' as const,
+    subdivisions: 8,
+    showSubdivisions: true,
+    subdivisionColor: '#FFE0B2',
+    showDivisionValues: true, // Muestra todos los valores de división
     borderRadius: 6
   }
 };

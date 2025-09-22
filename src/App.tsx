@@ -100,6 +100,8 @@ function App() {
   const [progresoShowSubdivisions, setProgresoShowSubdivisions] = useState<boolean>(true);
   // Nuevo estado para mostrar/ocultar valores de división
   const [progresoShowDivisionValues, setProgresoShowDivisionValues] = useState<boolean>(false);
+  // Nuevo estado para mostrar solo valores mínimo y máximo
+  const [progresoShowMinMaxValues, setProgresoShowMinMaxValues] = useState<boolean>(false);
 
   // Estados específicos para CardIndicadores
   const [cardIndicadores, setCardIndicadores] = useState([
@@ -1116,6 +1118,10 @@ ${rangesString}
       // Construir showDivisionValues
       const divisionValuesCode = progresoShowDivisionValues ? `,
     showDivisionValues: true` : '';
+
+      // Construir showMinMaxValues
+      const minMaxValuesCode = progresoShowMinMaxValues ? `,
+    showMinMaxValues: true` : '';
       
       return `
   progresoVerticalProps={{
@@ -1127,7 +1133,7 @@ ${rangesString}
     barWidth: ${progresoBarWidth},
     height: ${progresoHeight},
     showValue: ${progresoShowValue},
-    valuePosition: '${progresoValuePosition}'${subdivisionsCode}${divisionValuesCode}
+    valuePosition: '${progresoValuePosition}'${subdivisionsCode}${divisionValuesCode}${minMaxValuesCode}
   }}`;
     })() : '';
 
@@ -2237,9 +2243,27 @@ ${rangesString}
                         <input
                           type="checkbox"
                           checked={progresoShowDivisionValues}
-                          onChange={e => setProgresoShowDivisionValues(e.target.checked)}
+                          onChange={e => {
+                            setProgresoShowDivisionValues(e.target.checked);
+                            if (e.target.checked) setProgresoShowMinMaxValues(false);
+                          }}
                         />
                         <span style={{ fontSize: '12px' }}>Mostrar valores de cada división (Y axis)</span>
+                      </label>
+                    </div>
+
+                    {/* Mostrar solo valores mínimo y máximo */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={progresoShowMinMaxValues}
+                          onChange={e => {
+                            setProgresoShowMinMaxValues(e.target.checked);
+                            if (e.target.checked) setProgresoShowDivisionValues(false);
+                          }}
+                        />
+                        <span style={{ fontSize: '12px' }}>Mostrar solo valores mínimo y máximo</span>
                       </label>
                     </div>
                     
@@ -2782,19 +2806,6 @@ ${rangesString}
                   </p>
                 </div>
 
-                {/* Control para mostrar/ocultar valores de división en ProgresoVertical */}
-                {tipoActual.tipo === 'progresoVertical' && (
-                  <div style={{ margin: '8px 0' }}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={progresoShowDivisionValues}
-                        onChange={e => setProgresoShowDivisionValues(e.target.checked)}
-                      /> Mostrar valores de cada división (Y axis)
-                    </label>
-                  </div>
-                )}
-
                 {/* Render del gráfico */}
                 <div 
                   className="grafico-wrapper"
@@ -2957,7 +2968,8 @@ ${rangesString}
                       valuePosition: progresoValuePosition,
                       subdivisions: progresoSubdivisions,
                       showSubdivisions: progresoShowSubdivisions,
-                      showDivisionValues: progresoShowDivisionValues
+                      showDivisionValues: progresoShowDivisionValues,
+                      showMinMaxValues: progresoShowMinMaxValues
                     } : undefined}
 
 
@@ -3185,7 +3197,7 @@ import { Grafico, TipoGrafico, DatosGrafico } from 'react-charts-library';
             gap: '30px',
             marginBottom: '40px' 
           }}>
-            {ejemplosNeedles.map((ejemplo, index) => (
+            {ejemplosNeedles.map((ejemplo: any, index: number) => (
               <div key={index} className="grafico-card" style={{
                 border: '2px solid #e1e8ed',
                 borderRadius: '12px',

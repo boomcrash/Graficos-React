@@ -15,6 +15,25 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import React, { useEffect, useRef, useState } from 'react';
 import { Bar, Bubble, Doughnut, Line, Pie, PolarArea, Radar, Scatter } from 'react-chartjs-2';
+import { 
+  TipoGrafico, 
+  DatosGrafico, 
+  OpcionesGrafico, 
+  GraficoProps, 
+  DataLabelsContext,
+  ChartContext,
+  NeedlePluginOptions,
+  AfterDatasetDrawArgs,
+  ChartEvent,
+  TooltipContext,
+  CardIndicadoresProps,
+  ProgresoVerticalProps
+} from './GraficoInterfaces';
+
+
+
+// Font family estándar para todos los componentes
+const SYSTEM_FONT_FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"';
 
 // Registrar todos los componentes de Chart.js
 ChartJS.register(
@@ -31,237 +50,6 @@ ChartJS.register(
   Filler,
   ChartDataLabels
 );
-
-// Tipos de gráficos disponibles
-export type TipoGrafico = 
-  | 'line'
-  | 'bar'
-  | 'horizontalBar'
-  | 'barrasAgrupadas'
-  | 'barrasApiladas'
-  | 'pie'
-  | 'doughnut'
-  | 'polarArea'
-  | 'radar'
-  | 'scatter'
-  | 'bubble'
-  | 'area'
-  | 'multiEje'
-  | 'card'
-  | 'gauge'
-  | 'cardIndicadores'
-  | 'progresoVertical';// Interfaz para los datos del gráfico
-export interface DatosGrafico {
-  labels?: string[];
-  datasets: Array<{
-    label?: string;
-    data: number[];
-    backgroundColor?: string | string[];
-    borderColor?: string | string[];
-    borderWidth?: number;
-    fill?: boolean;
-    tension?: number;
-    pointRadius?: number;
-    pointHoverRadius?: number;
-    [key: string]: any;
-  }>;
-}
-
-// Interfaz para el contexto del formateador de etiquetas
-interface DataLabelsContext {
-  dataIndex: number;
-  dataset: {
-    data: any[];
-  };
-  [key: string]: any;
-}
-
-// Interfaz para las opciones del gráfico
-export interface OpcionesGrafico {
-  responsive?: boolean;
-  maintainAspectRatio?: boolean;
-  rotation?: number;
-  circumference?: number;
-  cutout?: string;
-  plugins?: {
-    legend?: {
-      position?: 'top' | 'left' | 'bottom' | 'right';
-      display?: boolean;
-    };
-    title?: {
-      display?: boolean;
-      text?: string;
-    };
-    tooltip?: {
-      enabled?: boolean;
-      [key: string]: any;
-    };
-    datalabels?:
-      | {
-          display?: boolean;
-          color?: string;
-          font?: {
-            weight?: string | number;
-            size?: number;
-            family?: string;
-          };
-          formatter?: (value: any, context: DataLabelsContext) => string;
-          [key: string]: any;
-        }
-      | false;
-    needle?: {
-      needleValue: number;
-      maxValue: number;
-    };
-    [key: string]: any;
-  };
-  scales?: object;
-  animation?: object;
-  // Permitir propiedades adicionales
-  [key: string]: any;
-}
-
-// Props del componente Grafico
-export interface GraficoProps {
-  tipo: TipoGrafico;
-  data?: DatosGrafico;
-  options?: OpcionesGrafico;
-  width?: string;
-  height?: string;
-  className?: string;
-  style?: React.CSSProperties;
-  mostrarEtiquetas?: boolean; // Nueva prop para mostrar/ocultar etiquetas de datos
-  // Nuevas props para mostrar/ocultar ejes
-  mostrarEjeX?: boolean; // Mostrar/ocultar eje X (por defecto: true)
-  mostrarEjeY?: boolean; // Mostrar/ocultar eje Y (por defecto: true)
-  configEtiquetas?: {
-    color?: string; // Color del texto (por defecto: negro)
-    fontSize?: number; // Tamaño de fuente (por defecto: 12)
-    fontFamily?: string; // Familia de fuente (por defecto: Arial)
-    fontWeight?: string | number; // Peso de fuente (por defecto: 500)
-    backgroundColor?: string; // Color de fondo (por defecto: gris suave #f5f5f5)
-    borderColor?: string; // Color del borde (por defecto: gris claro #d0d0d0)
-    borderRadius?: number; // Radio del borde (por defecto: 6)
-    padding?: number; // Padding interno (por defecto: 8)
-    anchor?: 'start' | 'center' | 'end'; // Posición de anclaje (por defecto: end)
-    align?: 'start' | 'center' | 'end' | 'top' | 'bottom' | 'left' | 'right'; // Alineación (por defecto: top)
-    offset?: number; // Desplazamiento (por defecto: 4)
-    rotation?: number; // Rotación en grados (por defecto: 0)
-    mostrarPorcentaje?: boolean; // Para gráficos circulares, mostrar porcentaje (por defecto: true)
-    formatoNumero?: 'default' | 'currency' | 'percent' | 'decimal'; // Formato de número
-    decimales?: number; // Número de decimales a mostrar (por defecto: 1)
-    isPercent?: boolean; // Si los valores son porcentajes y deben mostrar el símbolo % (por defecto: false)
-  };
-  // Props específicas para Card cuando tipo === 'card'
-  cardProps?: {
-    title?: string;
-    value?: string | number;
-    change?: string;
-    icon?: React.ReactNode;
-    colorScheme?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'secondary';
-    showBorder?: boolean;
-    borderColor?: string;
-    // Propiedades para personalizar texto
-    titleColor?: string;
-    titleFontSize?: string;
-    valueColor?: string;
-    valueFontSize?: string;
-    changeColor?: string;
-    changeFontSize?: string;
-  };
-  // Props específicas para el gráfico tipo gauge
-  gaugeProps?: {
-    ranges: Array<{
-      from: number;
-      to: number;
-      color: string;
-    }>;
-    value: number;
-    originalValue?: number; // Valor original sin limitar para mostrar en el centro
-    width?: number;
-    label?: string;
-    showLabels?: boolean;
-    isPercent?: boolean;
-    showValue?: boolean;
-    valueColor?: string;
-    valueFontSize?: number; // Tamaño de fuente del valor del centro
-    labelStyle?: {
-      backgroundColor?: string;
-      color?: string;
-    };
-    // Nuevas props para estilizado del contenedor
-    containerStyle?: {
-      backgroundColor?: string;
-      borderRadius?: number;
-      border?: string;
-      padding?: number;
-    };
-    // Nuevas props para símbolo personalizado
-    showSymbol?: boolean; // Mostrar símbolo cuando isPercent es false
-    symbol?: string; // El símbolo a mostrar (ej: '$', '€', etc.)
-    symbolPosition?: 'before' | 'after'; // Posición del símbolo
-    // Nuevas props para valores min/max en los extremos
-    showMinMax?: boolean; // Mostrar valores mínimo y máximo en los extremos del semicírculo
-    minMaxColor?: string; // Color de los valores min/max (por defecto usa valueColor)
-    minMaxFontSize?: number; // Tamaño de fuente de los valores min/max (por defecto 60% del valueFontSize)
-    // Props para personalización de la aguja/flecha
-    needleStyle?: 'default' | 'arrow' | 'triangle' | 'diamond' | 'modern' | 'minimal'; // Tipo de aguja
-    needleColor?: string; // Color de la aguja (por defecto '#000')
-    needleWidth?: number; // Grosor de la aguja (por defecto 2)
-    needleLength?: number; // Longitud de la aguja como porcentaje del radio (por defecto 0.9)
-  };
-  // Props específicas para el gráfico tipo cardIndicadores
-  cardIndicadoresProps?: {
-    indicadores: Array<{
-      icono: string; // Nombre del ícono de Material Icons
-      nombre: string;
-      valor: string | number;
-      isPercent?: boolean;
-      iconoColor?: string;
-      iconoTamano?: number; // Solo número, no string
-      nombreColor?: string;
-      nombreTamano?: number; // Solo número, no string
-      valorColor?: string;
-      valorTamano?: number; // Solo número, no string
-    }>;
-    alineacion?: 'left' | 'center' | 'right' | 'justify';
-    ancho?: string | number;
-    padding?: number | string;
-    backgroundColor?: string;
-    borderRadius?: number | string;
-    border?: string;
-    columnGap?: number; // Espaciado entre columnas para modo justify
-  };
-  // Props específicas para el gráfico tipo progresoVertical
-  progresoVerticalProps?: {
-    valor: number; // Valor actual del progreso
-    minimo?: number; // Valor mínimo (por defecto 0)
-    maximo?: number; // Valor máximo (por defecto 100)
-    isPercent?: boolean; // Si mostrar como porcentaje (por defecto true)
-    symbol?: string; // Símbolo personalizado cuando isPercent es false (ej: '$', '€')
-    symbolPosition?: 'before' | 'after'; // Posición del símbolo (por defecto 'after')
-    colorBar?: string; // Color de relleno de la barra (por defecto '#4CAF50')
-    backgroundColor?: string; // Color de fondo de la barra vacía (por defecto 'transparent')
-    subdivisions?: number; // Número de subdivisiones (por defecto 10)
-    showSubdivisions?: boolean; // Mostrar líneas de subdivisión (por defecto true)
-    subdivisionColor?: string; // Color de las líneas de subdivisión (por defecto '#CCCCCC')
-    barWidth?: number; // Ancho de la barra en píxeles (por defecto 40)
-    height?: number; // Altura del componente en píxeles (por defecto 300)
-    showValue?: boolean; // Mostrar el valor numérico (por defecto true)
-    valuePosition?: 'top' | 'center' | 'bottom'; // Posición del valor mostrado (por defecto 'top')
-    valueColor?: string; // Color del texto del valor (por defecto '#333333')
-    valueFontSize?: number; // Tamaño de fuente del valor en píxeles (por defecto 14)
-    borderRadius?: number; // Radio del borde de la barra (por defecto 4)
-    containerStyle?: React.CSSProperties; // Estilos adicionales del contenedor
-    showDivisionValues?: boolean; // Mostrar u ocultar los valores de cada división (Y axis)
-    // Configuración del título
-    showTitle?: boolean; // Mostrar u ocultar el título (por defecto false)
-    title?: string; // Texto del título
-    titleColor?: string; // Color del título (por defecto '#333333')
-    titleFontSize?: number; // Tamaño de fuente del título (por defecto 18)
-    titlePosition?: 'top' | 'bottom'; // Posición del título (por defecto 'top')
-  };
-}
 
 // --- Interfaces para las Cards ---
 
@@ -378,8 +166,12 @@ const drawNeedleStyles = {
 // Plugin mejorado para dibujar la aguja del gauge
 const needlePlugin = {
   id: 'needle',
-  afterDatasetDraw(chart: any, args: any, options: any) {
+  afterDatasetDraw(chart: ChartContext, args: AfterDatasetDrawArgs, options: NeedlePluginOptions) {
     const { needleValue, maxValue, needleStyle = 'default', needleColor = '#000', needleWidth = 2, needleLength = 0.9 } = options;
+
+    if (!chart._metasets || !chart._metasets[0] || !chart._metasets[0].data[0]) {
+      return;
+    }
 
     const angle = Math.PI + (Math.PI * needleValue) / maxValue;
 
@@ -711,6 +503,8 @@ interface ProgresoVerticalComponentProps {
   style?: React.CSSProperties;
   /** Mostrar u ocultar los valores de cada división (Y axis) */
   showDivisionValues?: boolean;
+  /** Mostrar solo los valores mínimo y máximo (inicio y fin) */
+  showMinMaxValues?: boolean;
   /** Configuración del título */
   showTitle?: boolean; // Mostrar u ocultar el título (por defecto false)
   title?: string; // Texto del título
@@ -742,6 +536,7 @@ const ProgresoVertical: React.FC<ProgresoVerticalComponentProps> = ({
   className = '',
   style = {},
   showDivisionValues = false,
+  showMinMaxValues = false,
   showTitle = false,
   title = '',
   titleColor = '#333333',
@@ -805,18 +600,37 @@ const ProgresoVertical: React.FC<ProgresoVerticalComponentProps> = ({
     ...style
   };
 
+  // Función para extraer valores RGB del color
+  const hexToRgb = (hex: string) => {
+    // Remover el # si está presente
+    const cleanHex = hex.replace('#', '');
+    const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(cleanHex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 76, g: 175, b: 80 }; // Color por defecto si hay error
+  };
+
+  // Obtener los valores RGB del color de la barra
+  const rgb = hexToRgb(colorBar);
+
   // Estilos de la barra contenedora
   const estilosBarraContenedora: React.CSSProperties = {
     width: `${barWidth}px`,
     height: `${height}px`,
-    backgroundColor: backgroundColor,
+    // Crear gradiente de fondo suave que cubra toda la barra
+    background: `linear-gradient(to top, 
+      rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.50) 0%, 
+      rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.30) 50%, 
+      rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.10) 100%)`,
     borderRadius: `${borderRadius}px`,
     position: 'relative',
     overflow: 'hidden',
     border: '1px solid #DDDDDD'
   };
 
-  // Estilos de la barra de relleno
+  // Estilos de la barra de relleno (parte sólida hasta el valor actual)
   const estilosBarraRelleno: React.CSSProperties = {
     width: '100%',
     height: `${porcentajeLlenado}%`,
@@ -825,7 +639,12 @@ const ProgresoVertical: React.FC<ProgresoVerticalComponentProps> = ({
     bottom: 0,
     left: 0,
     borderRadius: `0 0 ${borderRadius}px ${borderRadius}px`,
-    transition: 'height 0.3s ease-in-out'
+    transition: 'height 0.3s ease-in-out',
+    // Agregar un gradiente sutil en la parte superior del relleno para suavizar la transición
+    background: `linear-gradient(to top, 
+      ${colorBar} 0%, 
+      ${colorBar} 85%, 
+      rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8) 100%)`
   };
 
   // Estilos para las líneas de subdivisión
@@ -848,7 +667,7 @@ const ProgresoVertical: React.FC<ProgresoVerticalComponentProps> = ({
             fontWeight: '600',
             marginBottom: '16px',
             textAlign: 'center',
-            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            fontFamily: SYSTEM_FONT_FAMILY,
             lineHeight: '1.2',
             letterSpacing: '-0.025em',
             width: '100%'
@@ -918,6 +737,51 @@ const ProgresoVertical: React.FC<ProgresoVerticalComponentProps> = ({
           );
         })}
 
+        {/* Valores solo de inicio y fin cuando showMinMaxValues está activo */}
+        {showMinMaxValues && (
+          <>
+            {/* Valor mínimo (inicio - 0%) */}
+            <div
+              style={{
+                position: 'absolute',
+                left: -8,
+                bottom: '0%',
+                fontSize: `12px`,
+                color: '#666666',
+                transform: 'translate(-100%, 50%)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+              }}
+            >
+              {isPercent
+                ? `${minimo}%`
+                : symbolPosition === 'before'
+                  ? `${symbol}${minimo}`
+                  : `${minimo}${symbol}`}
+            </div>
+
+            {/* Valor máximo (fin - 100%) */}
+            <div
+              style={{
+                position: 'absolute',
+                left: -8,
+                bottom: '100%',
+                fontSize: `12px`,
+                color: '#666666',
+                transform: 'translate(-100%, -50%)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+              }}
+            >
+              {isPercent
+                ? `${maximo}%`
+                : symbolPosition === 'before'
+                  ? `${symbol}${maximo}`
+                  : `${maximo}${symbol}`}
+            </div>
+          </>
+        )}
+
         {/* Valor en el centro */}
         {showValue && valuePosition === 'center' && (
           <div
@@ -963,7 +827,7 @@ const ProgresoVertical: React.FC<ProgresoVerticalComponentProps> = ({
             fontWeight: '600',
             marginTop: '16px',
             textAlign: 'center',
-            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            fontFamily: SYSTEM_FONT_FAMILY,
             lineHeight: '1.2',
             letterSpacing: '-0.025em'
           }}
@@ -1081,7 +945,12 @@ const Grafico: React.FC<GraficoProps> = ({
     // Extraer opciones de título de las opciones generales si están disponibles
     const titleFromOptions = options?.plugins?.title;
     const shouldShowTitle = progresoVerticalProps.showTitle ?? (titleFromOptions?.display ?? false);
-    const titleText = progresoVerticalProps.title || titleFromOptions?.text || '';
+    
+    // Asegurar que titleText sea siempre un string
+    let titleText: string = progresoVerticalProps.title || '';
+    if (!titleText && titleFromOptions?.text) {
+      titleText = Array.isArray(titleFromOptions.text) ? titleFromOptions.text.join(' ') : String(titleFromOptions.text);
+    }
 
     return (
       <ProgresoVertical
@@ -1105,6 +974,7 @@ const Grafico: React.FC<GraficoProps> = ({
         borderRadius={progresoVerticalProps.borderRadius || 4}
         containerStyle={progresoVerticalProps.containerStyle || {}}
         showDivisionValues={progresoVerticalProps.showDivisionValues ?? false}
+        showMinMaxValues={progresoVerticalProps.showMinMaxValues ?? false}
         showTitle={shouldShowTitle}
         title={titleText}
         titleColor={progresoVerticalProps.titleColor || '#333333'}
@@ -1380,7 +1250,7 @@ const Grafico: React.FC<GraficoProps> = ({
         tooltip: {
           enabled: options.plugins?.tooltip?.enabled ?? false,
           callbacks: {
-            label: function (context: any) {
+            label: function (context: TooltipContext) {
               const dataIndex = context.dataIndex;
               if (dataIndex !== undefined && labels[dataIndex]) {
                 return labels[dataIndex];
@@ -1401,7 +1271,7 @@ const Grafico: React.FC<GraficoProps> = ({
               z: 9999, // Z-index muy alto para que esté por encima de todo
               font: {
                 size: configEtiquetas?.fontSize || 25,
-                family: configEtiquetas?.fontFamily || 'Arial, sans-serif',
+                family: configEtiquetas?.fontFamily || SYSTEM_FONT_FAMILY,
                 weight: configEtiquetas?.fontWeight || 500,
               },
               // Posicionamiento inteligente según la posición de la etiqueta
@@ -1448,7 +1318,7 @@ const Grafico: React.FC<GraficoProps> = ({
                 }
                 return 0;
               },
-              formatter: (_value: any, context: { dataIndex?: number }) => {
+              formatter: (_value: number, context: { dataIndex?: number }) => {
                 if (context && typeof context.dataIndex === 'number' && labels[context.dataIndex]) {
                   return labels[context.dataIndex];
                 }
@@ -1659,7 +1529,7 @@ const Grafico: React.FC<GraficoProps> = ({
               padding: configEtiquetas.padding || 8,
               font: {
                 size: configEtiquetas.fontSize || 12,
-                family: configEtiquetas.fontFamily || 'Arial, sans-serif',
+                family: configEtiquetas.fontFamily || SYSTEM_FONT_FAMILY,
                 weight: configEtiquetas.fontWeight || 500, // Texto semi-bold para mejor legibilidad
               },
               anchor: configEtiquetas.anchor || 'end',
@@ -1669,35 +1539,35 @@ const Grafico: React.FC<GraficoProps> = ({
               // Configuración específica por tipo de gráfico
               ...(tipo === 'bar' || tipo === 'barrasAgrupadas' || tipo === 'barrasApiladas'
                 ? {
-                    anchor: 'end',
-                    align: 'end',
+                    anchor: 'end' as const,
+                    align: 'end' as const,
                     offset: 4,
                   }
                 : {}),
               ...(tipo === 'horizontalBar'
                 ? {
-                    anchor: 'end',
-                    align: 'start',
+                    anchor: 'end' as const,
+                    align: 'start' as const,
                     offset: 4,
                   }
                 : {}),
               ...(tipo === 'pie' || tipo === 'doughnut'
                 ? {
-                    align: 'center',
-                    anchor: 'center',
+                    align: 'center' as const,
+                    anchor: 'center' as const,
                     offset: 0,
                     padding: 6,
                     font: {
                       size: configEtiquetas.fontSize || 11,
-                      family: configEtiquetas.fontFamily || 'Arial, sans-serif',
+                      family: configEtiquetas.fontFamily || SYSTEM_FONT_FAMILY,
                       weight: configEtiquetas.fontWeight || 500,
                     },
                   }
                 : {}),
               ...(tipo === 'polarArea'
                 ? {
-                    align: 'center',
-                    anchor: 'center',
+                    align: 'center' as const,
+                    anchor: 'center' as const,
                     offset: 0,
                     padding: 6,
                   }
@@ -1709,36 +1579,41 @@ const Grafico: React.FC<GraficoProps> = ({
                 : {}),
               ...(tipo === 'line' || tipo === 'area'
                 ? {
-                    anchor: 'end',
-                    align: 'top',
+                    anchor: 'end' as const,
+                    align: 'top' as const,
                     offset: 4,
                   }
                 : {}),
-              formatter: function (value: any, context: any) {
+              formatter: function (value: unknown, context: DataLabelsContext): string {
                 const decimales = configEtiquetas.decimales || 1;
                 const formato = configEtiquetas.formatoNumero || 'default';
                 const isPercent = configEtiquetas.isPercent || false;
 
                 // Para gráficos de coordenadas (scatter, bubble)
-                if (tipo === 'scatter') {
-                  const displayValue = isPercent ? `(${value.x}%, ${value.y}%)` : `(${value.x}, ${value.y})`;
+                if (tipo === 'scatter' && typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
+                  const coords = value as { x: number; y: number };
+                  const displayValue = isPercent ? `(${coords.x}%, ${coords.y}%)` : `(${coords.x}, ${coords.y})`;
                   return displayValue;
                 }
-                if (tipo === 'bubble') {
-                  const displayValue = isPercent ? `(${value.x}%, ${value.y}%, ${value.r}%)` : `(${value.x}, ${value.y}, ${value.r})`;
+                if (tipo === 'bubble' && typeof value === 'object' && value !== null && 'x' in value && 'y' in value && 'r' in value) {
+                  const coords = value as { x: number; y: number; r: number };
+                  const displayValue = isPercent ? `(${coords.x}%, ${coords.y}%, ${coords.r}%)` : `(${coords.x}, ${coords.y}, ${coords.r})`;
                   return displayValue;
                 }
+
+                // Convertir value a número para el resto de casos
+                const numValue = typeof value === 'number' ? value : Number(value) || 0;
 
                 // Para gráficos circulares (pie, doughnut)
                 if ((tipo === 'pie' || tipo === 'doughnut') && configEtiquetas.mostrarPorcentaje !== false) {
                   const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                  const percentage = ((value / total) * 100).toFixed(decimales);
-                  const valueDisplay = isPercent ? `${value}%` : value;
+                  const percentage = ((numValue / total) * 100).toFixed(decimales);
+                  const valueDisplay = isPercent ? `${numValue}%` : numValue;
                   return `${valueDisplay}\n(${percentage}%)`;
                 }
 
                 // Formateo de números según el tipo especificado
-                let formattedValue = value;
+                let formattedValue: string;
                 switch (formato) {
                   case 'currency':
                     formattedValue = new Intl.NumberFormat('es-ES', {
@@ -1746,28 +1621,24 @@ const Grafico: React.FC<GraficoProps> = ({
                       currency: 'EUR',
                       minimumFractionDigits: decimales,
                       maximumFractionDigits: decimales,
-                    }).format(value);
+                    }).format(numValue);
                     break;
                   case 'percent':
                     formattedValue = new Intl.NumberFormat('es-ES', {
                       style: 'percent',
                       minimumFractionDigits: decimales,
                       maximumFractionDigits: decimales,
-                    }).format(value / 100);
+                    }).format(numValue / 100);
                     break;
                   case 'decimal':
                     formattedValue = new Intl.NumberFormat('es-ES', {
                       minimumFractionDigits: decimales,
                       maximumFractionDigits: decimales,
-                    }).format(value);
+                    }).format(numValue);
                     break;
                   default:
                     // Para valores numéricos, mostrar con decimales especificados
-                    if (typeof value === 'number') {
-                      formattedValue = decimales === 0 ? Math.round(value).toString() : value.toFixed(decimales);
-                    } else {
-                      formattedValue = value;
-                    }
+                    formattedValue = decimales === 0 ? Math.round(numValue).toString() : numValue.toFixed(decimales);
                 }
 
                 // Agregar símbolo de porcentaje si isPercent es true y formato no es 'percent'
@@ -1810,8 +1681,11 @@ const Grafico: React.FC<GraficoProps> = ({
             const value = context.parsed?.y !== undefined ? context.parsed.y : context.parsed;
             const datasetLabel = context.dataset.label || '';
 
+            // Convertir value a número si es necesario
+            const numValue = typeof value === 'number' ? value : Number(value) || 0;
+
             // Formatear el valor base
-            let formattedValue = value;
+            let formattedValue: string;
             const decimales = configEtiquetas?.decimales || 1;
             const formato = configEtiquetas?.formatoNumero || 'default';
 
@@ -1823,25 +1697,23 @@ const Grafico: React.FC<GraficoProps> = ({
                   currency: 'EUR',
                   minimumFractionDigits: decimales,
                   maximumFractionDigits: decimales,
-                }).format(value);
+                }).format(numValue);
                 break;
               case 'percent':
                 formattedValue = new Intl.NumberFormat('es-ES', {
                   style: 'percent',
                   minimumFractionDigits: decimales,
                   maximumFractionDigits: decimales,
-                }).format(value / 100);
+                }).format(numValue / 100);
                 break;
               case 'decimal':
                 formattedValue = new Intl.NumberFormat('es-ES', {
                   minimumFractionDigits: decimales,
                   maximumFractionDigits: decimales,
-                }).format(value);
+                }).format(numValue);
                 break;
               default:
-                if (typeof value === 'number') {
-                  formattedValue = decimales === 0 ? Math.round(value).toString() : value.toFixed(decimales);
-                }
+                formattedValue = decimales === 0 ? Math.round(numValue).toString() : numValue.toFixed(decimales);
             }
 
             // Agregar símbolo de porcentaje si isPercent es true y formato no es 'percent'

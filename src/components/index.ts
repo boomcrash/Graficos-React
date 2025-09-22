@@ -1,21 +1,23 @@
 // Exportar el componente principal
-export { default as Grafico } from './Grafico';
-
-// Exportar tipos e interfaces del componente principal
-export type { 
-  TipoGrafico, 
-  DatosGrafico, 
-  OpcionesGrafico, 
-  GraficoProps 
-} from './Grafico';
+export { default as Grafico } from './Graphics/Grafico';
 
 // Exportar componente Card desde Grafico.tsx
 export { 
   Card
-} from './Grafico';
+} from './Graphics/Grafico';
+
+// Exportar tipos desde GraficoInterfaces.ts
 export type { 
-  CardProps
-} from './Grafico';
+  CardProps,
+  DatosGrafico,
+  TipoGrafico,
+  OpcionesGrafico,
+  ConfiguracionEtiquetas,
+  GaugeProps,
+  CardIndicadoresProps,
+  ProgresoVerticalProps,
+  GraficoProps
+} from './Graphics/GraficoInterfaces';
 
 // Exportar todos los datos de ejemplo
-export * from './datosEjemplo';
+export * from './GraphicsData/datosEjemplo';
