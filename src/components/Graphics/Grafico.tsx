@@ -24,10 +24,7 @@ import {
   ChartContext,
   NeedlePluginOptions,
   AfterDatasetDrawArgs,
-  ChartEvent,
-  TooltipContext,
-  CardIndicadoresProps,
-  ProgresoVerticalProps
+  TooltipContext
 } from './GraficoInterfaces';
 
 
